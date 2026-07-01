@@ -1,0 +1,177 @@
+<div class="dashboard-page">
+  <header>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      AXIOM CONTROL
+    </div>
+    <nav class="menu">
+      <a routerLink="/dashboard">Dashboard</a>
+      <a href="#tanques">Tanques</a>
+      <a routerLink="/">Relatórios</a>
+      <a href="#emergencia">Emergência</a>
+    </nav>
+    <div class="header-right">
+      <div class="status-bar-mini">
+        <div class="logo-dot"></div>
+        SISTEMA OPERACIONAL
+      </div>
+    </div>
+  </header>
+
+  @if (carregando) {
+    <div class="loading-state">A carregar dados industriais do Supabase...</div>
+  } @else {
+    <main>
+      <div class="section-header" id="tanques">
+        <div class="section-line"></div>
+        <h2 class="titulo-industrial">Painel de Controle: Status dos Tanques</h2>
+      </div>
+
+      <div class="Tanques-geral">
+        @for (tanque of tanques; track tanque.codigo) {
+          <div class="TanqueCard" [ngClass]="tanque.classCard">
+            <div class="tank-label">{{ tanque.codigo }} / {{ tanque.linha }}</div>
+            <div class="tank-name">{{ tanque.nome }}</div>
+            <div class="tank-temp-display" [ngClass]="tanque.classTemp">{{ tanque.temperatura }}°C</div>
+            <div class="tank-status" [ngClass]="tanque.classStatus">
+              <span class="status-dot"></span>
+              {{ tanque.statusTexto }}
+            </div>
+            <div class="nivel-label">
+              <span>NÍVEL</span>
+              <span>{{ tanque.nivel }}%</span>
+            </div>
+            <div class="barra-fundo">
+              <div
+                class="barra-nivel-dinamica"
+                [ngClass]="tanque.barraClasse"
+                [style.width.%]="tanque.nivel"
+              ></div>
+            </div>
+            <button class="btn-emergencia" type="button" (click)="ativarEStop(tanque)">⚠ E-STOP</button>
+          </div>
+        }
+      </div>
+
+      <div class="section-header">
+        <div class="section-line"></div>
+        <h2 class="titulo-industrial">Gráficos de Monitoramento Térmico</h2>
+      </div>
+
+      <div class="container-graficos">
+        @for (grafico of graficos; track grafico.codigo) {
+          <section class="painel-grafico">
+            <h3>Histórico de Temperatura<br>{{ grafico.nome }} — Últimas 5 horas</h3>
+            <div class="grafico-barras">
+              @for (ponto of grafico.pontos; track ponto.horario) {
+                <div
+                  class="barra"
+                  [class.perigo]="ponto.perigo"
+                  [style.height.%]="ponto.altura"
+                >
+                  <span>{{ ponto.temperatura }}°C</span>
+                </div>
+              }
+            </div>
+            <div class="eixo-x">
+              @for (horario of grafico.horarios; track horario) {
+                <span>{{ horario }}</span>
+              }
+            </div>
+          </section>
+        }
+      </div>
+
+      <div class="section-header">
+        <div class="section-line"></div>
+        <h2 class="titulo-industrial">Registro de Ocorrências do Turno (Log)</h2>
+      </div>
+
+      <section class="log-sistema">
+        <h4>Histórico de Eventos e Alarmes — Tempo Real</h4>
+        <ul class="lista-log">
+          @for (log of logs; track log.horario + log.mensagem) {
+            <li [ngClass]="log.tipo">
+              <span class="hora">{{ log.horario }}</span> {{ log.mensagem }}
+            </li>
+          }
+        </ul>
+      </section>
+
+      <div class="section-header" id="emergencia">
+        <div class="section-line"></div>
+        <h2 class="titulo-industrial">Relatar Ocorrência</h2>
+      </div>
+
+      <div class="relatar-section">
+        <h3>Enviar Notificação</h3>
+        <div class="RelatarCaixa">
+          <input
+            type="text"
+            placeholder="Descreva o problema ocorrido..."
+            [(ngModel)]="descricaoOcorrencia"
+          />
+        </div>
+        <div class="QualTropaGeral">
+          <div class="Qualtropa">
+            <label>
+              <input type="checkbox" [(ngModel)]="tanquesSelecionados['Tanque 01']" />
+              <span class="tanque1">Tanque 01</span>
+            </label>
+          </div>
+          <div class="Qualtropa">
+            <label>
+              <input type="checkbox" [(ngModel)]="tanquesSelecionados['Tanque 02']" />
+              <span class="tanque2">Tanque 02</span>
+            </label>
+          </div>
+          <div class="Qualtropa">
+            <label>
+              <input type="checkbox" [(ngModel)]="tanquesSelecionados['Tanque 03']" />
+              <span class="tanque3">Tanque 03</span>
+            </label>
+          </div>
+        </div>
+        <button class="EnviarNoti" type="button" [disabled]="enviandoOcorrencia" (click)="enviarNotificacao()">
+          {{ enviandoOcorrencia ? 'Enviando...' : 'Enviar Notificação para o Operador' }}
+        </button>
+        @if (mensagemEnvio) {
+          <p class="mensagem-envio">{{ mensagemEnvio }}</p>
+        }
+      </div>
+
+     
+    </main>
+
+    <footer>
+      <div class="redes-socias">
+        <p>Redes Sociais:</p>
+        <a href="https://www.instagram.com/afyyzer" target="_blank" rel="noopener noreferrer">Instagram</a>
+      </div>
+      <p class="Copyright">© 2026 Cadax | Todos os direitos reservados.</p>
+    </footer>
+  }
+
+  <div class="statusbar">
+    <div class="statusbar-item">
+      <div class="statusbar-dot sb-green"></div>
+      SISTEMA <strong>OPERACIONAL</strong>
+    </div>
+    <div class="statusbar-item">
+      <div class="statusbar-dot sb-green"></div>
+      TANQUES ATIVOS <strong>{{ tanquesAtivos }}/{{ tanques.length || 3 }}</strong>
+    </div>
+    <div class="statusbar-item">
+      <div class="statusbar-dot sb-orange"></div>
+      ALERTAS <strong>{{ alertasAtivos }}</strong>
+    </div>
+    <div class="statusbar-item">
+      <div class="statusbar-dot sb-purple"></div>
+      IA PREDITIVA <strong>ATIVA</strong>
+    </div>
+    <div class="statusbar-right">
+      <div class="statusbar-item">UPTIME <strong>{{ uptime }}</strong></div>
+      <div class="statusbar-item">ÚLTIMO SYNC <strong>{{ ultimoSync }}</strong></div>
+    </div>
+  </div>
+</div>

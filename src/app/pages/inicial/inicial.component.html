@@ -1,0 +1,169 @@
+<nav>
+    <div class="nav-logo">
+        <div class="nav-logo-dot"></div>
+        AXIOM CONTROL
+    </div>
+    <a routerLink="/admin" class="btn-primary">
+        Acessar Painel Admin
+    </a>
+</nav>
+
+<div class="status-bar">
+    <div class="status-item">
+        <div class="status-dot dot-green"></div>
+        SISTEMA <span class="status-value">OPERACIONAL</span>
+    </div>
+    <div class="status-item">
+        <div class="status-dot dot-green"></div>
+        TANQUES ATIVOS <span class="status-value">12/12</span>
+    </div>
+    <div class="status-item">
+        <div class="status-dot dot-yellow"></div>
+        ALERTAS <span class="status-value" id="status-alert-count">2</span>
+    </div>
+    <div class="status-item">
+        <div class="status-dot dot-green"></div>
+        IA PREDITIVA <span class="status-value">ATIVA</span>
+    </div>
+    <div class="status-item" style="margin-left:auto;">
+        UPTIME <span class="status-value">99.97%</span>
+    </div>
+    <div class="status-item">
+        ÚLTIMO SYNC <span class="status-value" id="sync-time">2s atrás</span>
+    </div>
+</div>
+
+<section class="hero">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="hero-left">
+        <div class="hero-eyebrow reveal">SISTEMA INDUSTRIAL</div>
+        <h1 class="reveal reveal-delay-1">
+            <span class="thin">Sistema</span><br>
+            <span class="accent">Axiom</span><br>
+            Control
+        </h1>
+        <p class="hero-desc reveal reveal-delay-2">
+            Monitoramento térmico avançado, controle inteligente e IA preditiva para tanques industriais. Assuma o
+            controle total da sua operação em tempo real.
+        </p>
+        <div class="hero-actions reveal reveal-delay-3">
+            <a routerLink="/admin" class="btn-primary">
+                Acessar Dashboard
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <div class="hero-right">
+        <div class="dashboard-preview">
+            <div class="dash-header">
+                <span class="dash-title">PAINEL DE CONTROLE — TURNO A</span>
+                <div class="dash-dots">
+                    <div class="dash-dot" style="background:#ef4444"></div>
+                    <div class="dash-dot" style="background:#f59e0b"></div>
+                    <div class="dash-dot" style="background:#22d3a4"></div>
+                </div>
+            </div>
+            <div class="dash-body">
+                <div class="tank-row">
+                    <div class="tank-card" [ngClass]="tanques[0].class">
+                        <div class="tank-id">{{ tanques[0].id }}</div>
+                        <div class="tank-temp">{{ tanques[0].temp }}°C</div>
+                        <div class="tank-label">{{ tanques[0].label }}</div>
+                    </div>
+
+                    <div class="tank-card" [ngClass]="tanques[1].class">
+                        <div class="tank-id">{{ tanques[1].id }}</div>
+                        <div class="tank-temp">{{ tanques[1].temp }}°C</div>
+                        <div class="tank-label">{{ tanques[1].label }}</div>
+                    </div>
+
+                    <div class="tank-card" [ngClass]="tanques[2].class">
+                        <div class="tank-id">{{ tanques[2].id }}</div>
+                        <div class="tank-temp">{{ tanques[2].temp }}°C</div>
+                        <div class="tank-label">{{ tanques[2].label }}</div>
+                    </div>
+                </div>
+
+                <div class="fill-section">
+                    <div class="fill-row">
+                        <div class="fill-label">Tanque-01</div>
+                        <div class="fill-bar-wrap">
+                            <div class="fill-bar green" style="width:87%"></div>
+                        </div>
+                        <div class="fill-pct">70%</div>
+                    </div>
+                    <div class="fill-row">
+                        <div class="fill-label">Tanque-02</div>
+                        <div class="fill-bar-wrap">
+                            <div class="fill-bar yellow" style="width:63%"></div>
+                        </div>
+                        <div class="fill-pct">40%</div>
+                    </div>
+                    <div class="fill-row">
+                        <div class="fill-label">Tanque-03</div>
+                        <div class="fill-bar-wrap">
+                            <div class="fill-bar purple" style="width:41%"></div>
+                        </div>
+                        <div class="fill-pct">5%</div>
+                    </div>
+                </div>
+
+                <div class="log-section">
+                    <div class="log-header">
+                        <span>LOG DO SISTEMA</span>
+                        <span>TEMPO REAL</span>
+                    </div>
+
+                    @for (log of mensagensLog; track log.msg) {
+                    <div class="log-entry">
+                        <span class="log-time">14:30</span>
+                        <span class="log-msg">{{ log.msg }}</span>
+                        <span class="log-badge" [ngClass]="log.badge">{{ log.label }}</span>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="ticker-wrap">
+    <div class="ticker">
+        <div class="ticker-item">Tanque-01 <span class="t-val" id="tick-tk01">44°C</span></div>
+        <div class="ticker-item">Tanque-02 <span class="t-val" style="color: #f59e0b;">96°C ⚠ ATENÇÃO</span></div>
+        <div class="ticker-item">Tanque-03 <span class="t-val">23°C</span></div>
+        <div class="ticker-item">MISTURADOR-01 <span class="t-val">ATIVO</span></div>
+        <div class="ticker-item">REATOR-01 <span class="t-val">OPERANDO (40%)</span></div>
+        <div class="ticker-item">UPTIME SISTEMA <span class="t-val">99.97%</span></div>
+    </div>
+</div>
+
+<section class="section" id="features">
+    <div class="section-label reveal">FUNCIONALIDADES</div>
+    <h2 class="section-title reveal reveal-delay-1">Tudo que sua <span>operação</span> precisa</h2>
+    <p class="section-desc reveal reveal-delay-2">Plataforma completa de controle industrial projetada para
+        ambientes de alta exigência. Confiabilidade e precisão em cada decision.</p>
+
+    <div class="feature-grid">
+        <div class="feature-card reveal">
+            <div class="feature-num">01</div>
+            <div class="feature-icon">🌡️</div>
+            <div class="feature-title">Monitoramento em Tempo Real</div>
+            <p class="feature-desc">Acompanhe temperatura, nível de fluidos e status operacional dos reatores e
+                misturadores com atualizações a cada 2 segundos.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-1">
+            <div class="feature-num">02</div>
+            <div class="feature-icon">🤖</div>
+            <div class="feature-title">IA Preditiva Avançada</div>
+            <p class="feature-desc">Algoritmos que detectam padrões anômalos e tendências de
+                superaquecimento antes que se tornem falhas críticas.</p>
+        </div>
+    </div>
+</section>

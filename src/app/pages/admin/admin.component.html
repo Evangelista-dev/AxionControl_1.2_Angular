@@ -1,0 +1,144 @@
+@if (!isAuthorized) {
+<div class="login-wrapper">
+    <div class="login-box">
+        <h2>Acesso de Administrador</h2>
+        <p class="login-desc">Insira a senha mestra para continuar</p>
+        
+        <input type="password" [(ngModel)]="adminPassword" (keyup.enter)="verificarSenha()" placeholder="Senha..." class="form-input">
+        
+        <button (click)="verificarSenha()" class="btn-primary" style="margin-top: 15px;">Entrar no Painel</button>
+        <button routerLink="/" class="btn-secondary" style="margin-top: 10px;">Voltar</button>
+        
+        @if (errorMessage) {
+            <p class="error-msg">{{ errorMessage }}</p>
+        }
+    </div>
+</div>
+}
+
+@else {
+<div class="admin-background">
+    <div class="shell">
+        <header>
+            <div class="logo">
+                <div class="logo-dot"></div>
+                Axiom Control
+            </div>
+            <span class="header-badge">PAINEL DE ADMINISTRADOR</span>
+            <nav class="header-nav">
+                <a routerLink="/" class="btn-back"> Retornar ao Sistema</a>
+            </nav>
+        </header>
+
+        <aside>
+            <div>
+                <p class="section-label">Novo Registro</p>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">NOME DO USUÁRIO</label>
+                    <input type="text" [(ngModel)]="novoNome" class="form-input" placeholder="Ex: João da Silva" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">CPF</label>
+                    <input type="text" [(ngModel)]="novoCpf" class="form-input" placeholder="Apenas números" maxlength="11" autocomplete="off">
+                </div>
+
+                <button (click)="criarConta()" class="btn-primary">+ Criar Conta</button>
+
+                <button (click)="alternarTabela()" class="btn-secondary">
+                    <span>Ver Usuários</span>
+                    <span class="arrow" [ngClass]="{'open': tabelaVisivel}">↓</span>
+                </button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <p class="section-label">Status</p>
+                <div class="stat-card">
+                    <div class="stat-icon purple">👤</div>
+                    <div>
+                        <div class="stat-num">{{ usuarios.length }}</div>
+                        <div class="stat-desc">usuários cadastrados</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">✅</div>
+                    <div>
+                        <div class="stat-num" style="font-size:14px;color:var(--green)">ATIVO</div>
+                        <div class="stat-desc">sistema operacional</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div>
+                <p class="section-label" style="margin-bottom:12px;">Zona de Perigo</p>
+                <button (click)="resetarUsuarios()" class="btn-danger">⚠ Resetar Todos os Usuários</button>
+            </div>
+        </aside>
+
+        <main>
+            <div class="main-header">
+                <div>
+                    <div class="main-title">Gerenciamento<br>de <span>Usuários</span></div>
+                </div>
+                <div class="search-box">
+                    <input type="text" class="search-input" [(ngModel)]="termoBusca" (input)="filtrarTabela()" placeholder="Filtrar por nome...">
+                </div>
+            </div>
+
+            @if (tabelaVisivel) {
+            <div id="area-tabela" class="visible">
+                <div class="table-wrap">
+                    <div class="table-topbar">
+                        <span class="table-topbar-title">Registros do Sistema</span>
+                        <span class="count-badge">{{ usuariosFiltrados.length }} usuários</span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (u of usuariosFiltrados; track u.id_gerado) {
+                            <tr>
+                                <td class="cell-id">{{ u.id_gerado }}</td>
+                                <td class="cell-name">{{ u.nome }}</td>
+                                <td class="cell-cpf">{{ u.cpf }}</td>
+                                <td><button (click)="removerConta(u.id_gerado)" class="btn-danger" style="padding: 4px 10px; width: auto; font-size: 10px;">Excluir</button></td>
+                            </tr>
+                            } @empty {
+                            <tr>
+                                <td colspan="4" class="table-empty">Nenhum registro encontrado.</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            } @else {
+            <div id="placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--mono);font-size:13px;opacity:0.5;">
+                Clique em "Ver Usuários" para exibir os registros
+            </div>
+            }
+        </main>
+
+        <footer>
+            <span class="footer-text">AXIOM CONTROL · ADMIN v1.0</span>
+            <span class="footer-text">{{ currentTime }}</span>
+        </footer>
+    </div>
+
+    @if (toastVisible) {
+        <div id="toast" class="show" [ngClass]="toastClass">{{ toastMessage }}</div>
+    }
+</div>
+}
