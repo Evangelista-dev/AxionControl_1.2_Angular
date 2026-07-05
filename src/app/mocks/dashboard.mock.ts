@@ -1,9 +1,37 @@
-export interface OperadorTurno {
-  nome: string;
-  turno: 'Manhã' | 'Tarde' | 'Noite';
+export interface PeriodoTurno {
+  turno: string;
   horario: string;
-  atividade: string;
-  cor: string;
+  inicio: number;
+  fim: number;
+}
+
+export const PERIODOS_TURNO: PeriodoTurno[] = [
+  { turno: 'Manhã', horario: '06:00 às 14:00', inicio: 6, fim: 14 },
+  { turno: 'Tarde', horario: '14:00 às 22:00', inicio: 14, fim: 22 },
+  { turno: 'Noite', horario: '22:00 às 06:00', inicio: 22, fim: 6 }
+];
+
+export function identificarPeriodoTurno(data = new Date()): PeriodoTurno {
+  const hora = data.getHours();
+
+  for (const periodo of PERIODOS_TURNO) {
+    if (periodo.inicio < periodo.fim) {
+      if (hora >= periodo.inicio && hora < periodo.fim) {
+        return periodo;
+      }
+    } else if (hora >= periodo.inicio || hora < periodo.fim) {
+      return periodo;
+    }
+  }
+
+  return PERIODOS_TURNO[0];
+}
+
+export function turnoEstaAtivo(horaAtual: number, inicio: number, fim: number): boolean {
+  if (inicio < fim) {
+    return horaAtual >= inicio && horaAtual < fim;
+  }
+  return horaAtual >= inicio || horaAtual < fim;
 }
 
 export type StatusTanque = 'normal' | 'critico' | 'manutencao';
@@ -106,91 +134,6 @@ export const historicoTemperaturaMock: Record<string, HistoricoTemperaturaPonto[
     { temperatura: 22, horario: '14:00' }
   ]
 };
-
-export const logOcorrenciasMock: LogOcorrencia[] = [
-  { horario: '[08:00:12]', mensagem: '[SISTEMA] Login do Operador: Alisson Teixeira (Turno A).', tipo: 'info' },
-  { horario: '[09:15:00]', mensagem: '[TANQUE 03] Ciclo de lavagem concluído com sucesso.', tipo: 'sucesso' },
-  { horario: '[09:20:33]', mensagem: '[TANQUE 03] Válvulas bloqueadas fisicamente para manutenção.', tipo: 'info' },
-  { horario: '[10:05:10]', mensagem: '[TANQUE 01] Iniciando ciclo de mistura nominal.', tipo: 'info' },
-  { horario: '[11:00:05]', mensagem: '[TANQUE 01] Temperatura ideal (45°C) atingida e estabilizada.', tipo: 'sucesso' },
-  { horario: '[13:45:22]', mensagem: '[TANQUE 02] Aviso: Taxa de aquecimento acima do padrão.', tipo: 'alerta' },
-  { horario: '[14:10:00]', mensagem: '[TANQUE 02] CRÍTICO: Temperatura em 98°C. Limite de segurança excedido!', tipo: 'erro' }
-];
-
-export const projecoesIaMock: ProjecaoIa[] = [
-  {
-    horario: '[Em 15 min]',
-    mensagem: '[OTIMIZAÇÃO] Redução de 12% no consumo de energia prevista ao sincronizar o resfriamento dos Tanques 01 e 03.',
-    tipo: 'predicao'
-  },
-  {
-    horario: '[Em 40 min]',
-    mensagem: '[QUALIDADE] Lote atual de mistura atingirá a viscosidade ideal (99.8% de precisão) antes do tempo estimado.',
-    tipo: 'predicao'
-  },
-  {
-    horario: '[Em 72 horas]',
-    mensagem: '[MANUTENÇÃO] Vibração anômala detectada no Motor Principal da Linha B. Falha projetada em 3 dias. Recomendação: Agendar revisão.',
-    tipo: 'alerta-moderado'
-  },
-  {
-    horario: '[15:30:00]',
-    mensagem: '[PRODUÇÃO] Probabilidade de 85% de gargalo no setor de embalagens devido ao aumento do fluxo da Linha A.',
-    tipo: 'predicao'
-  },
-  {
-    horario: '[Crítico]',
-    mensagem: '[SEGURANÇA] Tendência de superaquecimento (105°C) projetada para a Válvula de Pressão 04 em exatos 18 minutos. Ação manual ou correção automática exigida imediatamente.',
-    tipo: 'alerta-critico'
-  },
-  {
-    horario: '[Amanhã, 08:00]',
-    mensagem: '[AMBIENTE] Queda brusca de temperatura externa prevista. Ajustando parâmetros de pré-aquecimento das caldeiras automaticamente.',
-    tipo: 'predicao'
-  }
-];
-
-export const operadoresTurnoMock: OperadorTurno[] = [
-  {
-    nome: 'Afonso',
-    turno: 'Manhã',
-    horario: '06:00 às 14:00',
-    atividade: 'Monitoramento térmico e manutenção preventiva',
-    cor: 'status-ligado'
-  },
-  {
-    nome: 'Breno',
-    turno: 'Tarde',
-    horario: '14:00 às 22:00',
-    atividade: 'Acompanhamento de níveis e alertas',
-    cor: 'status-ligado'
-  },
-  {
-    nome: 'João Pedro',
-    turno: 'Noite',
-    horario: '22:00 às 06:00',
-    atividade: 'Supervisão noturna e registro de ocorrências',
-    cor: 'status-manutencao'
-  }
-];
-
-export function resolverTurnoAtual(data: Date): OperadorTurno {
-  const hora = data.getHours();
-
-  if (hora >= 6 && hora < 14) {
-    return operadoresTurnoMock[0];
-  }
-
-  if (hora >= 14 && hora < 22) {
-    return operadoresTurnoMock[1];
-  }
-
-  return operadoresTurnoMock[2];
-}
-
-export function obterOperadorPorNome(nome: string): OperadorTurno | undefined {
-  return operadoresTurnoMock.find((operador) => operador.nome.toLowerCase() === nome.toLowerCase());
-}
 
 export function mapearStatusParaClasses(status: StatusTanque) {
   switch (status) {

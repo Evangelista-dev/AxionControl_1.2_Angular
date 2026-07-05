@@ -1,19 +1,48 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { operariosMockData, OperarioMock } from '../mocks/operarios.mock';
+import { OperarioMock } from '../mocks/operarios.mock';
 import {
   HistoricoTemperaturaPonto,
   LogOcorrencia,
-  ProjecaoIa,
+  PeriodoTurno,
   StatusTanque,
   TanqueStatus,
-  calcularAlturaBarra,
   historicoTemperaturaMock,
-  logOcorrenciasMock,
-  projecoesIaMock,
   tanquesStatusMock
 } from '../mocks/dashboard.mock';
+import {
+  TurnoCadastro,
+  periodoFromTurnoCadastro,
+  turnoCadastroEstaAtivo
+} from '../utils/turno.util';
+
+export interface OperarioTurno extends TurnoCadastro {
+  nome: string;
+}
+
+export interface ProducaoDiariaRegistro {
+  data_registro: string;
+  temperatura_t1: number;
+  temperatura_t2: number;
+  temperatura_t3: number;
+  temperatura: number;
+  nivel: number;
+  alertas: number;
+}
+
+export interface OcorrenciaOperador {
+  descricao: string;
+  tanques: string[];
+  created_at: string;
+}
+
+export interface ResumoSemanal {
+  oeeMedio: number;
+  totalAlertas: number;
+  temperaturaMedia: number;
+  nivelMedio: number;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -21,8 +50,8 @@ import {
 export class SupabaseService {
   private supabase: SupabaseClient | null = null;
   private useMockData = true;
-  private mockOperarios: OperarioMock[] = [...operariosMockData];
-  private historicoSemanal: Record<string, unknown>[] = [];
+  private mockOperarios: OperarioMock[] = [];
+  private historicoSemanal: ProducaoDiariaRegistro[] = [];
 
   constructor() {
     if (typeof window === 'undefined') {
@@ -51,17 +80,29 @@ export class SupabaseService {
     const { data, error } = await this.supabase.from('operarios').select('*');
     if (error) {
       console.error('Erro ao listar:', error.message);
-      return this.mockOperarios;
+      return [];
     }
-    return data;
+    return data ?? [];
   }
 
-  async cadastrarOperario(id_gerado: string, nome: string, cpf: string) {
+  async cadastrarOperario(
+    id_gerado: string,
+    nome: string,
+    cpf: string,
+    turno: TurnoCadastro = {
+      turno_nome: 'Manhã',
+      turno_inicio: '06:00',
+      turno_fim: '14:00'
+    }
+  ) {
     if (this.useMockData || !this.supabase) {
       this.mockOperarios.unshift({
         id_gerado,
         nome,
         cpf,
+        turno_nome: turno.turno_nome,
+        turno_inicio: turno.turno_inicio,
+        turno_fim: turno.turno_fim,
         created_at: new Date().toISOString()
       });
       return true;
@@ -72,6 +113,9 @@ export class SupabaseService {
         id_gerado,
         nome,
         cpf,
+        turno_nome: turno.turno_nome,
+        turno_inicio: turno.turno_inicio,
+        turno_fim: turno.turno_fim,
         created_at: new Date().toISOString()
       }
     ]);
@@ -116,10 +160,11 @@ export class SupabaseService {
       return this.mockOperarios.find((operario) => operario.id_gerado.toUpperCase() === id_gerado.toUpperCase()) || null;
     }
 
+    const idNormalizado = id_gerado.toUpperCase();
     const { data, error } = await this.supabase
       .from('operarios')
       .select('*')
-      .eq('id_gerado', id_gerado)
+      .eq('id_gerado', idNormalizado)
       .single();
 
     if (error || !data) {
@@ -129,9 +174,9 @@ export class SupabaseService {
     return data;
   }
 
-  async obterHistoricoProducao() {
+  async obterHistoricoProducao(): Promise<ProducaoDiariaRegistro[]> {
     if (!this.supabase || !this.isBrowserRuntime()) {
-      return [];
+      return this.gerarProducaoDiariaMock();
     }
 
     const { data, error } = await this.supabase
@@ -141,20 +186,28 @@ export class SupabaseService {
 
     if (error) {
       console.error('Erro ao buscar histórico industrial:', error.message);
-      return [];
+      return this.gerarProducaoDiariaMock();
     }
 
-    this.historicoSemanal = data ?? [];
-    return data ?? [];
+    const registros = (data ?? []).map((row) => this.normalizarProducaoDiaria(row));
+
+    if (!registros.length) {
+      return this.gerarProducaoDiariaMock();
+    }
+
+    this.historicoSemanal = registros;
+    return registros;
   }
 
-  async obterHistoricoTemperaturaDiaria(campoTemperatura = 'temperatura_t1'): Promise<HistoricoTemperaturaPonto[]> {
+  async obterHistoricoTemperaturaDiaria(
+    campoTemperatura: keyof Pick<ProducaoDiariaRegistro, 'temperatura_t1' | 'temperatura_t2' | 'temperatura_t3'> = 'temperatura_t1'
+  ): Promise<HistoricoTemperaturaPonto[]> {
     const registros = await this.obterHistoricoProducao();
     const pontos: HistoricoTemperaturaPonto[] = [];
 
     for (const row of registros) {
-      const dataRegistro = String(row['data_registro'] ?? '');
-      const temperatura = Number(row[campoTemperatura]);
+      const dataRegistro = row.data_registro;
+      const temperatura = row[campoTemperatura];
 
       if (!dataRegistro || Number.isNaN(temperatura)) {
         continue;
@@ -175,11 +228,15 @@ export class SupabaseService {
   async obterMediaSemanalTanques(): Promise<HistoricoTemperaturaPonto[]> {
     const registros = await this.obterHistoricoProducao();
     const ultimosSeteDias = registros.slice(-7);
-    const campos = ['temperatura_t1', 'temperatura_t2', 'temperatura_t3'];
+    const campos: Array<keyof Pick<ProducaoDiariaRegistro, 'temperatura_t1' | 'temperatura_t2' | 'temperatura_t3'>> = [
+      'temperatura_t1',
+      'temperatura_t2',
+      'temperatura_t3'
+    ];
 
     return campos.map((campo, index) => {
       const valores = ultimosSeteDias
-        .map((row) => Number(row[campo]))
+        .map((row) => row[campo])
         .filter((valor) => !Number.isNaN(valor));
       const media = valores.length
         ? Math.round((valores.reduce((total, valor) => total + valor, 0) / valores.length) * 10) / 10
@@ -202,7 +259,7 @@ export class SupabaseService {
     const { data, error } = await this.supabase
       .from('operarios')
       .select('*')
-      .order('created_at', { ascending: true });
+      .order('turno_inicio', { ascending: true });
 
     if (error) {
       console.error('Erro ao obter operarios para turnos:', error.message);
@@ -257,27 +314,49 @@ export class SupabaseService {
 
   async obterLogOcorrencias(): Promise<LogOcorrencia[]> {
     if (!this.supabase || !this.isBrowserRuntime()) {
-      return [...logOcorrenciasMock];
+      return [];
     }
 
     const { data, error } = await this.supabase
       .from('log_ocorrencias')
       .select('*')
       .order('horario', { ascending: false })
-      .limit(20);
+      .limit(30);
 
     if (error || !data?.length) {
-      return [...logOcorrenciasMock];
+      return [];
     }
 
-    return data
-      .slice()
-      .reverse()
-      .map((row) => ({
-        horario: this.formatarHorarioLog(row.horario),
-        mensagem: String(row.mensagem ?? ''),
-        tipo: (row.tipo ?? 'info') as LogOcorrencia['tipo']
-      }));
+    return data.map((row) => ({
+      horario: this.formatarHorarioLog(row.horario),
+      mensagem: String(row.mensagem ?? ''),
+      tipo: (row.tipo ?? 'info') as LogOcorrencia['tipo']
+    }));
+  }
+
+  async registrarLogOcorrencia(mensagem: string, tipo: LogOcorrencia['tipo'] = 'info'): Promise<boolean> {
+    if (!mensagem.trim()) {
+      return false;
+    }
+
+    if (!this.supabase || !this.isBrowserRuntime()) {
+      return false;
+    }
+
+    const { error } = await this.supabase.from('log_ocorrencias').insert([
+      {
+        mensagem: mensagem.trim(),
+        tipo,
+        horario: new Date().toISOString()
+      }
+    ]);
+
+    if (error) {
+      console.error('Erro ao registrar log de ocorrência:', error.message);
+      return false;
+    }
+
+    return true;
   }
 
   async obterTurnoAtual() {
@@ -289,6 +368,7 @@ export class SupabaseService {
       .from('turnos_fabrica')
       .select('*')
       .eq('status', 'em_andamento')
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
@@ -300,15 +380,128 @@ export class SupabaseService {
     return data;
   }
 
+  async sincronizarTurnoAtual(
+    operario?: OperarioTurno | null,
+    opcoes: { registrarAssuncao?: boolean } = {}
+  ): Promise<Record<string, unknown> | null> {
+    if (!this.supabase || !this.isBrowserRuntime()) {
+      return null;
+    }
+
+    const turnoAtivo = await this.obterTurnoAtual();
+
+    if (!operario?.nome?.trim()) {
+      return turnoAtivo;
+    }
+
+    const turnoCadastro: TurnoCadastro = {
+      turno_nome: operario.turno_nome,
+      turno_inicio: operario.turno_inicio,
+      turno_fim: operario.turno_fim
+    };
+    const periodo = periodoFromTurnoCadastro(turnoCadastro);
+    const dentroDoTurno = turnoCadastroEstaAtivo(turnoCadastro);
+
+    if (!dentroDoTurno) {
+      return turnoAtivo;
+    }
+
+    if (turnoAtivo) {
+      const turnoId = Number(turnoAtivo['id']);
+      const turnoAtualNome = String(turnoAtivo['turno'] ?? '');
+      const turnoAtualHorario = String(turnoAtivo['horario'] ?? '');
+      const mesmoTurno =
+        turnoAtualNome === periodo.turno && turnoAtualHorario === periodo.horario;
+
+      if (mesmoTurno) {
+        if (
+          operario.nome !== turnoAtivo['operario_nome'] &&
+          opcoes.registrarAssuncao !== false
+        ) {
+          const { error: updateError } = await this.supabase
+            .from('turnos_fabrica')
+            .update({ operario_nome: operario.nome })
+            .eq('id', turnoId);
+
+          if (!updateError) {
+            await this.adicionarLog(
+              turnoId,
+              `[SISTEMA] Operador ${operario.nome} assumiu o turno ${periodo.turno}.`,
+              'info'
+            );
+            turnoAtivo['operario_nome'] = operario.nome;
+          }
+        }
+
+        return turnoAtivo;
+      }
+
+      await this.finalizarTurno(turnoId);
+    }
+
+    return this.iniciarTurno(operario.nome, periodo);
+  }
+
+  private async iniciarTurno(
+    operarioNome: string,
+    periodo: PeriodoTurno
+  ): Promise<Record<string, unknown> | null> {
+    if (!this.supabase) {
+      return null;
+    }
+
+    const { data, error } = await this.supabase
+      .from('turnos_fabrica')
+      .insert([
+        {
+          operario_nome: operarioNome,
+          turno: periodo.turno,
+          horario: periodo.horario,
+          status: 'em_andamento'
+        }
+      ])
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('Erro ao iniciar turno:', error?.message);
+      return null;
+    }
+
+    await this.adicionarLog(
+      data['id'] as number,
+      `[SISTEMA] Turno ${periodo.turno} iniciado. Operador: ${operarioNome}.`,
+      'info'
+    );
+
+    return data;
+  }
+
+  private async finalizarTurno(turnoId: number): Promise<void> {
+    if (!this.supabase || !turnoId) {
+      return;
+    }
+
+    const { error } = await this.supabase
+      .from('turnos_fabrica')
+      .update({ status: 'finalizado' })
+      .eq('id', turnoId);
+
+    if (error) {
+      console.error('Erro ao finalizar turno:', error.message);
+    }
+  }
+
   async obterLogsDoTurno(turnoId: string | number): Promise<LogOcorrencia[]> {
-    if (!turnoId || !this.supabase || !this.isBrowserRuntime()) {
+    const turnoNumerico = Number(turnoId);
+    if (Number.isNaN(turnoNumerico) || !this.supabase || !this.isBrowserRuntime()) {
       return [];
     }
 
     const { data, error } = await this.supabase
       .from('logs_operacao')
       .select('*')
-      .eq('turno_id', turnoId)
+      .eq('turno_id', turnoNumerico)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -328,14 +521,19 @@ export class SupabaseService {
       return false;
     }
 
+    const turnoNumerico = Number(turnoId);
+    if (Number.isNaN(turnoNumerico)) {
+      console.warn('Log de turno ignorado: turno_id inválido.', turnoId);
+      return false;
+    }
+
     if (!this.supabase || !this.isBrowserRuntime()) {
-      console.info('Log de turno registrado localmente:', { turnoId, mensagem, tipo });
-      return true;
+      return false;
     }
 
     const { error } = await this.supabase.from('logs_operacao').insert([
       {
-        turno_id: turnoId,
+        turno_id: turnoNumerico,
         mensagem: mensagem.trim(),
         tipo,
         created_at: new Date().toISOString()
@@ -350,25 +548,53 @@ export class SupabaseService {
     return true;
   }
 
-  async obterProjecoesIa(): Promise<ProjecaoIa[]> {
+  async obterOcorrenciasRecentes(limite = 20): Promise<OcorrenciaOperador[]> {
     if (!this.supabase || !this.isBrowserRuntime()) {
-      return [...projecoesIaMock];
+      return [];
     }
 
     const { data, error } = await this.supabase
-      .from('projecoes_ia')
+      .from('ocorrencias_operador')
       .select('*')
-      .order('id', { ascending: true });
+      .order('created_at', { ascending: false })
+      .limit(limite);
 
-    if (error || !data?.length) {
-      return [...projecoesIaMock];
+    if (error) {
+      console.error('Erro ao buscar ocorrências do operador:', error.message);
+      return [];
     }
 
-    return data.map((row) => ({
-      horario: String(row.horario ?? ''),
-      mensagem: String(row.mensagem ?? ''),
-      tipo: (row.tipo ?? 'predicao') as ProjecaoIa['tipo']
+    return (data ?? []).map((row) => ({
+      descricao: String(row.descricao ?? ''),
+      tanques: Array.isArray(row.tanques) ? row.tanques.map(String) : [],
+      created_at: String(row.created_at ?? '')
     }));
+  }
+
+  calcularResumoSemanal(registros: ProducaoDiariaRegistro[]): ResumoSemanal {
+    if (!registros.length) {
+      return { oeeMedio: 0, totalAlertas: 0, temperaturaMedia: 0, nivelMedio: 0 };
+    }
+
+    const totalAlertas = registros.reduce((acc, row) => acc + row.alertas, 0);
+    const oeeMedio = Math.round(
+      registros.reduce((acc, row) => acc + this.calcularOee(row), 0) / registros.length
+    );
+    const temperaturaMedia = Math.round(
+      (registros.reduce((acc, row) => acc + row.temperatura, 0) / registros.length) * 10
+    ) / 10;
+    const nivelMedio = Math.round(
+      registros.reduce((acc, row) => acc + row.nivel, 0) / registros.length
+    );
+
+    return { oeeMedio, totalAlertas, temperaturaMedia, nivelMedio };
+  }
+
+  calcularOee(registro: ProducaoDiariaRegistro): number {
+    const temps = [registro.temperatura_t1, registro.temperatura_t2, registro.temperatura_t3];
+    const penalidadeTemp = temps.filter((temp) => temp >= 85).length * 5;
+
+    return Math.max(0, Math.min(100, Math.round(100 - registro.alertas * 8 - penalidadeTemp)));
   }
 
   async enviarOcorrencia(descricao: string, tanques: string[]): Promise<boolean> {
@@ -403,11 +629,19 @@ export class SupabaseService {
       return false;
     }
 
-    const dados = this.historicoSemanal.length ? this.historicoSemanal : await this.obterHistoricoProducao();
+    const dadosCompletos = this.historicoSemanal.length
+      ? (this.historicoSemanal as ProducaoDiariaRegistro[])
+      : await this.obterHistoricoProducao();
+    const dadosSemana = dadosCompletos.slice(-7);
+    const ocorrencias = await this.obterOcorrenciasRecentes();
+    const resumo = this.calcularResumoSemanal(dadosSemana);
+
     const { error } = await this.supabase.functions.invoke('send-weekly-pdf', {
       body: {
-        email: 'afonso.oliveira2301@gmail.com',
-        dados
+        email: environment.reportEmail,
+        dados: dadosSemana,
+        ocorrencias,
+        resumo
       }
     });
 
@@ -417,6 +651,55 @@ export class SupabaseService {
     }
 
     return true;
+  }
+
+  private normalizarProducaoDiaria(row: Record<string, unknown>): ProducaoDiariaRegistro {
+    const t1 = Number(row['temperatura_t1'] ?? 0);
+    const t2 = Number(row['temperatura_t2'] ?? 0);
+    const t3 = Number(row['temperatura_t3'] ?? 0);
+    const temperatura = Number(row['temperatura'] ?? (t1 + t2 + t3) / 3);
+
+    return {
+      data_registro: String(row['data_registro'] ?? ''),
+      temperatura_t1: t1,
+      temperatura_t2: t2,
+      temperatura_t3: t3,
+      temperatura: Math.round(temperatura * 10) / 10,
+      nivel: Number(row['nivel'] ?? 0),
+      alertas: Number(row['alertas'] ?? 0)
+    };
+  }
+
+  private gerarProducaoDiariaMock(): ProducaoDiariaRegistro[] {
+    const registros: ProducaoDiariaRegistro[] = [];
+    const meses = [
+      { mes: 4, dias: 30 },
+      { mes: 5, dias: 31 },
+      { mes: 6, dias: 30 }
+    ];
+
+    for (const { mes, dias } of meses) {
+      for (let dia = 1; dia <= dias; dia++) {
+        const progresso = registros.length / 91;
+        const t1 = Math.round(42 + progresso * 18 + (dia % 5));
+        const t2 = Math.round(55 + progresso * 25 + (dia % 7));
+        const t3 = Math.round(20 + progresso * 8 + (dia % 3));
+        const alertas = t2 >= 85 || t1 >= 90 ? 1 + (dia % 3) : dia % 11 === 0 ? 1 : 0;
+
+        registros.push({
+          data_registro: `2026-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`,
+          temperatura_t1: t1,
+          temperatura_t2: t2,
+          temperatura_t3: t3,
+          temperatura: Math.round(((t1 + t2 + t3) / 3) * 10) / 10,
+          nivel: Math.max(5, Math.min(95, Math.round(70 - progresso * 15 + (dia % 10)))),
+          alertas
+        });
+      }
+    }
+
+    this.historicoSemanal = registros;
+    return registros;
   }
 
   private normalizarTanque(row: Record<string, unknown>): TanqueStatus {
@@ -433,37 +716,35 @@ export class SupabaseService {
     };
   }
 
-  private mapearProducaoParaTanques(registros: Record<string, unknown>[]): TanqueStatus[] {
+  private mapearProducaoParaTanques(registros: ProducaoDiariaRegistro[] | Record<string, unknown>[]): TanqueStatus[] {
     if (!registros.length) {
       return [...tanquesStatusMock];
     }
 
-    const ultimo = registros[registros.length - 1];
-    const tempBase = Number(ultimo['temperatura'] ?? 45);
-    const nivelBase = Number(ultimo['nivel'] ?? 70);
-    const alertas = Number(ultimo['alertas'] ?? 0);
+    const ultimo = registros[registros.length - 1] as ProducaoDiariaRegistro;
+    const alertas = ultimo.alertas ?? 0;
 
     return [
       {
         ...tanquesStatusMock[0],
-        temperatura: tempBase,
-        nivel: nivelBase,
-        status: 'normal',
-        statusTexto: 'OPERANDO — NORMAL'
+        temperatura: ultimo.temperatura_t1,
+        nivel: ultimo.nivel,
+        status: ultimo.temperatura_t1 >= 85 ? 'critico' : 'normal',
+        statusTexto: ultimo.temperatura_t1 >= 85 ? 'CRÍTICO — SUPERAQUECIMENTO' : 'OPERANDO — NORMAL'
       },
       {
         ...tanquesStatusMock[1],
-        temperatura: alertas > 0 ? Math.max(tempBase + 50, 95) : 60,
-        nivel: Math.max(20, Math.round(nivelBase * 0.6)),
-        status: alertas > 0 ? 'critico' : 'normal',
-        statusTexto: alertas > 0 ? 'CRÍTICO — SUPERAQUECIMENTO' : 'OPERANDO — NORMAL'
+        temperatura: ultimo.temperatura_t2,
+        nivel: Math.max(20, Math.round(ultimo.nivel * 0.6)),
+        status: ultimo.temperatura_t2 >= 85 || alertas > 0 ? 'critico' : 'normal',
+        statusTexto: ultimo.temperatura_t2 >= 85 || alertas > 0 ? 'CRÍTICO — SUPERAQUECIMENTO' : 'OPERANDO — NORMAL'
       },
       {
         ...tanquesStatusMock[2],
-        temperatura: Math.max(18, Math.round(tempBase * 0.5)),
-        nivel: Math.max(5, Math.round(nivelBase * 0.1)),
-        status: 'manutencao',
-        statusTexto: 'EM MANUTENÇÃO'
+        temperatura: ultimo.temperatura_t3,
+        nivel: Math.max(5, Math.round(ultimo.nivel * 0.1)),
+        status: ultimo.temperatura_t3 < 30 ? 'manutencao' : 'normal',
+        statusTexto: ultimo.temperatura_t3 < 30 ? 'EM MANUTENÇÃO' : 'OPERANDO — NORMAL'
       }
     ];
   }

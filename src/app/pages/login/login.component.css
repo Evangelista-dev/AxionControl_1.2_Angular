@@ -1,0 +1,120 @@
+:host {
+  display: block;
+  --bg: #080b10;
+  --surface: #0d1117;
+  --border: rgba(255, 255, 255, 0.06);
+  --accent: #7c3aed;
+  --accent-g: #8b5cf6;
+  --red: #ef4444;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --mono: 'Space Mono', monospace;
+  --display: 'Rajdhani', sans-serif;
+}
+
+.login-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--display);
+}
+
+.login-box {
+  background: var(--surface);
+  padding: 40px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid var(--border);
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-box h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+
+.login-desc {
+  color: var(--muted);
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent-g);
+}
+
+.btn-primary,
+.btn-secondary {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-g));
+  color: #fff;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.login-footer {
+  margin: 4px 0 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.login-footer a {
+  color: var(--accent-g);
+  text-decoration: none;
+}
+
+.error-msg {
+  color: var(--red);
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.4;
+}

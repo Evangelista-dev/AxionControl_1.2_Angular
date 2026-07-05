@@ -2,12 +2,27 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { PDFDocument, StandardFonts, rgb } from 'https://esm.sh/pdf-lib@1.17.1';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') ?? 'Axion Control <onboarding@resend.dev>';
+const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') ?? 'Axiom Control <onboarding@resend.dev>';
 const DESTINO_FIXO = 'afonso.oliveira2301@gmail.com';
+
+type OcorrenciaPayload = {
+  descricao?: string;
+  tanques?: string[];
+  created_at?: string;
+};
+
+type ResumoPayload = {
+  oeeMedio?: number;
+  totalAlertas?: number;
+  temperaturaMedia?: number;
+  nivelMedio?: number;
+};
 
 type RelatorioPayload = {
   email?: string;
   dados?: Record<string, unknown>[];
+  ocorrencias?: OcorrenciaPayload[];
+  resumo?: ResumoPayload;
 };
 
 const corsHeaders = {
@@ -32,11 +47,12 @@ serve(async (req) => {
 
     const payload = (await req.json()) as RelatorioPayload;
     const dados = Array.isArray(payload.dados) ? payload.dados : [];
-    const pdfBytes = await gerarPdfSemanal(dados);
+    const ocorrencias = Array.isArray(payload.ocorrencias) ? payload.ocorrencias : [];
+    const resumo = payload.resumo ?? {};
+    const destino = payload.email?.trim() || DESTINO_FIXO;
+    const pdfBytes = await gerarPdfSemanal(dados, ocorrencias, resumo);
     const pdfBase64 = bytesToBase64(pdfBytes);
 
-    // Futuro: esta mesma Edge Function pode ser disparada por um job pg_cron
-    // no Supabase, tornando o envio semanal 100% autonomo e independente do frontend.
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -45,12 +61,12 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: RESEND_FROM_EMAIL,
-        to: [DESTINO_FIXO],
-        subject: 'Relatorio Semanal - Axion Control',
+        to: [destino],
+        subject: 'Relatorio Semanal - Axiom Control',
         html: `
-          <h2>Relatorio Semanal - Axion Control</h2>
-          <p>Segue em anexo o PDF semanal com os dados consolidados da producao.</p>
-          <p>Destino operacional fixo: ${DESTINO_FIXO}</p>
+          <h2>Relatorio Semanal - Axiom Control</h2>
+          <p>Segue em anexo o PDF semanal com producao, resumo operacional e ocorrencias relatadas.</p>
+          <p>Destino: ${destino}</p>
         `,
         attachments: [
           {
@@ -66,54 +82,113 @@ serve(async (req) => {
       return json({ error: 'Falha ao enviar email pelo Resend.', detalhe }, 502);
     }
 
-    return json({ ok: true, email: DESTINO_FIXO });
+    return json({ ok: true, email: destino });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'Erro inesperado.' }, 500);
   }
 });
 
-async function gerarPdfSemanal(dados: Record<string, unknown>[]) {
+async function gerarPdfSemanal(
+  dados: Record<string, unknown>[],
+  ocorrencias: OcorrenciaPayload[],
+  resumo: ResumoPayload
+) {
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([595.28, 841.89]);
+  let page = pdf.addPage([595.28, 841.89]);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
 
-  const { height } = page.getSize();
-  let y = height - 56;
+  let y = page.getSize().height - 56;
 
-  page.drawText('Axion Control', { x: 48, y, size: 20, font: bold, color: rgb(0.05, 0.08, 0.14) });
+  page.drawText('Axiom Control', { x: 48, y, size: 20, font: bold, color: rgb(0.05, 0.08, 0.14) });
   y -= 28;
   page.drawText('Relatorio semanal de producao diaria', { x: 48, y, size: 12, font });
   y -= 22;
   page.drawText(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, { x: 48, y, size: 9, font });
-  y -= 30;
+  y -= 28;
+
+  page.drawText('Resumo da Semana', { x: 48, y, size: 13, font: bold });
+  y -= 18;
+  page.drawText(`Eficiencia Media (OEE): ${formatarNumero(resumo.oeeMedio)}%`, { x: 48, y, size: 10, font });
+  y -= 14;
+  page.drawText(`Total de Alertas: ${formatarNumero(resumo.totalAlertas)}`, { x: 48, y, size: 10, font });
+  y -= 14;
+  page.drawText(`Temperatura Media: ${formatarNumero(resumo.temperaturaMedia)} C`, { x: 48, y, size: 10, font });
+  y -= 14;
+  page.drawText(`Nivel Medio: ${formatarNumero(resumo.nivelMedio)}%`, { x: 48, y, size: 10, font });
+  y -= 24;
+
+  page.drawText('Ocorrencias Relatadas', { x: 48, y, size: 13, font: bold });
+  y -= 18;
+
+  if (!ocorrencias.length) {
+    page.drawText('Nenhuma ocorrencia registrada pelo operador neste periodo.', { x: 48, y, size: 10, font });
+    y -= 20;
+  } else {
+    for (const item of ocorrencias.slice(0, 8)) {
+      if (y < 120) {
+        page = pdf.addPage([595.28, 841.89]);
+        y = page.getSize().height - 56;
+      }
+
+      const data = item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : 'Data nao informada';
+      const tanques = Array.isArray(item.tanques) && item.tanques.length ? item.tanques.join(', ') : 'N/A';
+      const descricao = String(item.descricao ?? 'Sem descricao').slice(0, 120);
+
+      page.drawText(`[${data}]`, { x: 48, y, size: 8, font: bold });
+      y -= 12;
+      page.drawText(`Tanques: ${tanques}`, { x: 48, y, size: 8, font });
+      y -= 12;
+      page.drawText(descricao, { x: 48, y, size: 9, font, maxWidth: 500 });
+      y -= 28;
+    }
+  }
+
+  y -= 10;
+
+  if (y < 180) {
+    page = pdf.addPage([595.28, 841.89]);
+    y = page.getSize().height - 56;
+  }
+
+  page.drawText('Producao Diaria (ultimos registos)', { x: 48, y, size: 13, font: bold });
+  y -= 18;
 
   if (!dados.length) {
     page.drawText('Nenhum dado semanal recebido no payload.', { x: 48, y, size: 11, font });
     return pdf.save();
   }
 
-  page.drawText('Data', { x: 48, y, size: 10, font: bold });
-  page.drawText('Temperatura T1', { x: 150, y, size: 10, font: bold });
-  page.drawText('Registo bruto', { x: 275, y, size: 10, font: bold });
-  y -= 16;
+  page.drawText('Data', { x: 48, y, size: 9, font: bold });
+  page.drawText('T1', { x: 120, y, size: 9, font: bold });
+  page.drawText('T2', { x: 160, y, size: 9, font: bold });
+  page.drawText('T3', { x: 200, y, size: 9, font: bold });
+  page.drawText('Nivel', { x: 240, y, size: 9, font: bold });
+  page.drawText('Alertas', { x: 290, y, size: 9, font: bold });
+  y -= 14;
 
   for (const row of dados.slice(0, 28)) {
     if (y < 60) {
       break;
     }
 
-    const data = String(row.data_registro ?? '-');
-    const temperatura = String(row.temperatura_t1 ?? '-');
-    const resumo = JSON.stringify(row).slice(0, 90);
-
-    page.drawText(data, { x: 48, y, size: 8, font });
-    page.drawText(temperatura, { x: 150, y, size: 8, font });
-    page.drawText(resumo, { x: 275, y, size: 7, font });
-    y -= 14;
+    page.drawText(String(row.data_registro ?? '-'), { x: 48, y, size: 8, font });
+    page.drawText(String(row.temperatura_t1 ?? '-'), { x: 120, y, size: 8, font });
+    page.drawText(String(row.temperatura_t2 ?? '-'), { x: 160, y, size: 8, font });
+    page.drawText(String(row.temperatura_t3 ?? '-'), { x: 200, y, size: 8, font });
+    page.drawText(String(row.nivel ?? '-'), { x: 240, y, size: 8, font });
+    page.drawText(String(row.alertas ?? '-'), { x: 290, y, size: 8, font });
+    y -= 12;
   }
 
   return pdf.save();
+}
+
+function formatarNumero(valor: unknown): string {
+  if (valor === undefined || valor === null || Number.isNaN(Number(valor))) {
+    return '0';
+  }
+  return String(valor);
 }
 
 function bytesToBase64(bytes: Uint8Array) {

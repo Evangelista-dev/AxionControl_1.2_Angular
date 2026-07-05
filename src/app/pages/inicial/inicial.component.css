@@ -1,4 +1,8 @@
-:root {
+:host {
+  display: block;
+}
+
+.landing-page {
     --bg: #06060a;
     --surface: #0e0e16;
     --surface2: #14141f;
@@ -11,36 +15,42 @@
     --red: #ef4444;
     --text: #f1f0fb;
     --muted: #6b7280;
-    --mono: 'DM Mono', monospace;
-    --sans: 'Instrument Sans', sans-serif;
-    --display: 'Syne', sans-serif;
-  }
- 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
- 
-  html { scroll-behavior: smooth; }
- 
-  body {
+    --mono: 'Space Mono', monospace;
+    --sans: 'Rajdhani', sans-serif;
+    --display: 'Orbitron', sans-serif;
+
+    min-height: 100vh;
     background: var(--bg);
     color: var(--text);
     font-family: var(--sans);
     overflow-x: hidden;
-    cursor: default;
+    padding-bottom: 36px;
+    position: relative;
+  }
+
+  .landing-page > nav,
+  .landing-page > .status-bar,
+  .landing-page > .hero,
+  .landing-page > .ticker-wrap,
+  .landing-page > .section {
+    position: relative;
+    z-index: 1;
   }
  
-  /* ── NOISE OVERLAY ── */
-  body::before {
+  .landing-page::before {
     content: '';
     position: fixed; inset: 0;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
     pointer-events: none;
-    z-index: 999;
+    z-index: 0;
     opacity: 0.6;
   }
- 
- 
-  nav {
-    position: fixed; top: 0; left: 0; right: 0;
+
+.landing-page nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 48px;
@@ -491,7 +501,7 @@
   /* FEATURE GRID */
   .feature-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2px;
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -708,16 +718,17 @@
   .footer-links a { color: inherit; text-decoration: none; transition: color 0.2s; }
   .footer-links a:hover { color: var(--text); }
  
-  /* ── ANIMATIONS ── */
   .reveal {
     opacity: 0;
     transform: translateY(24px);
     transition: opacity 0.7s ease, transform 0.7s ease;
   }
-  .reveal.visible {
+
+  .reveal.active {
     opacity: 1;
     transform: translateY(0);
   }
+
   .reveal-delay-1 { transition-delay: 0.1s; }
   .reveal-delay-2 { transition-delay: 0.2s; }
   .reveal-delay-3 { transition-delay: 0.3s; }
@@ -755,7 +766,7 @@
  
   /* ── RESPONSIVE ── */
   @media (max-width: 900px) {
-    nav { padding: 0 24px; }
+    .landing-page nav { padding: 0 24px; }
     .nav-links { display: none; }
     .hero { grid-template-columns: 1fr; }
     .hero-left { padding: 40px 24px; }
@@ -765,24 +776,7 @@
     .metrics-band { grid-template-columns: 1fr 1fr; padding: 0 24px 80px; }
     .cta-section { grid-template-columns: 1fr; padding: 40px 24px; margin: 0 24px 80px; }
     footer { flex-direction: column; gap: 20px; text-align: center; padding: 40px 24px; }
-    .status-bar { padding: 0 24px; gap: 16px; overflow-x: auto; }
+    .status-bar { padding: 0 24px; gap: 16px; overflow-x: auto; flex-shrink: 0; }
     h1 { font-size: 2.5rem; }
+    .feature-grid { grid-template-columns: 1fr; }
   }
-
- /* Estado Inicial: Invisível e um pouco mais para baixo */
-.reveal {
-    opacity: 0;
-    transform: translateY(30px);
-    transition: all 0.8s ease-out;
-}
-
-/* Estado Final: Visível e na posição original (A classe que o Angular vai adicionar) */
-.reveal.active {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Os delays que você colocou no HTML para os itens aparecerem um depois do outro */
-.reveal-delay-1 { transition-delay: 0.2s; }
-.reveal-delay-2 { transition-delay: 0.4s; }
-.reveal-delay-3 { transition-delay: 0.6s; }

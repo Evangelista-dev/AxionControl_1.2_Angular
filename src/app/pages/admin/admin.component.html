@@ -1,14 +1,18 @@
 @if (!isAuthorized) {
 <div class="login-wrapper">
     <div class="login-box">
-        <h2>Acesso de Administrador</h2>
-        <p class="login-desc">Insira a senha mestra para continuar</p>
-        
-        <input type="password" [(ngModel)]="adminPassword" (keyup.enter)="verificarSenha()" placeholder="Senha..." class="form-input">
-        
-        <button (click)="verificarSenha()" class="btn-primary" style="margin-top: 15px;">Entrar no Painel</button>
+        <h2>Painel Administrativo</h2>
+        <p class="login-desc">
+            Área restrita para gestão de operadores.<br>
+            Operadores devem usar a <a routerLink="/login">tela de login</a>.
+        </p>
+
+        <input type="password" [(ngModel)]="adminPassword" (keyup.enter)="verificarSenha()" placeholder="Senha de administrador..." class="form-input">
+
+        <button (click)="verificarSenha()" class="btn-primary" style="margin-top: 15px;">Entrar como Admin</button>
+        <button routerLink="/login" class="btn-secondary" style="margin-top: 10px;">Sou operador</button>
         <button routerLink="/" class="btn-secondary" style="margin-top: 10px;">Voltar</button>
-        
+
         @if (errorMessage) {
             <p class="error-msg">{{ errorMessage }}</p>
         }
@@ -26,6 +30,9 @@
             </div>
             <span class="header-badge">PAINEL DE ADMINISTRADOR</span>
             <nav class="header-nav">
+                <a routerLink="/login" class="btn-back">Login Operador</a>
+                <a routerLink="/dashboard" class="btn-back">Abrir Dashboard</a>
+                <button type="button" class="btn-back" (click)="sairAdmin()">Sair</button>
                 <a routerLink="/" class="btn-back"> Retornar ao Sistema</a>
             </nav>
         </header>
@@ -42,7 +49,30 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">CPF</label>
-                    <input type="text" [(ngModel)]="novoCpf" class="form-input" placeholder="Apenas números" maxlength="11" autocomplete="off">
+                    <input type="text" [(ngModel)]="novoCpf" class="form-input" placeholder="Ex: 12345678900 ou qualquer identificador" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">TURNO</label>
+                    <select [(ngModel)]="turnoPresetIndex" (ngModelChange)="aplicarPresetTurno($event)" class="form-input">
+                        @for (preset of turnosPreset; track preset.turno_nome; let i = $index) {
+                            <option [ngValue]="i">{{ preset.turno_nome }} ({{ preset.turno_inicio }} - {{ preset.turno_fim }})</option>
+                        }
+                        <option [ngValue]="-1">Personalizado</option>
+                    </select>
+                </div>
+                @if (turnoPresetIndex === -1) {
+                    <div class="form-group">
+                        <label class="form-label">NOME DO TURNO</label>
+                        <input type="text" [(ngModel)]="turnoNome" class="form-input" placeholder="Ex: Madrugada" autocomplete="off">
+                    </div>
+                }
+                <div class="form-group">
+                    <label class="form-label">HORÁRIO DO TURNO</label>
+                    <div class="turno-horario">
+                        <input type="time" [(ngModel)]="turnoInicio" class="form-input" [disabled]="turnoPresetIndex !== -1">
+                        <span>até</span>
+                        <input type="time" [(ngModel)]="turnoFim" class="form-input" [disabled]="turnoPresetIndex !== -1">
+                    </div>
                 </div>
 
                 <button (click)="criarConta()" class="btn-primary">+ Criar Conta</button>
@@ -104,6 +134,8 @@
                                 <th>ID</th>
                                 <th>Nome</th>
                                 <th>CPF</th>
+                                <th>Turno</th>
+                                <th>Horário</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -112,12 +144,14 @@
                             <tr>
                                 <td class="cell-id">{{ u.id_gerado }}</td>
                                 <td class="cell-name">{{ u.nome }}</td>
-                                <td class="cell-cpf">{{ u.cpf }}</td>
+                                <td class="cell-cpf">{{ formatarCpfExibicao(u.cpf) }}</td>
+                                <td>{{ u.turno_nome || '—' }}</td>
+                                <td>{{ formatarHorarioUsuario(u) }}</td>
                                 <td><button (click)="removerConta(u.id_gerado)" class="btn-danger" style="padding: 4px 10px; width: auto; font-size: 10px;">Excluir</button></td>
                             </tr>
                             } @empty {
                             <tr>
-                                <td colspan="4" class="table-empty">Nenhum registro encontrado.</td>
+                                <td colspan="6" class="table-empty">Nenhum registro encontrado.</td>
                             </tr>
                             }
                         </tbody>

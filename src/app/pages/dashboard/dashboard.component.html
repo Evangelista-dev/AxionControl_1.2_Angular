@@ -1,203 +1,312 @@
 <div class="dashboard-page">
-  <header>
-    <div class="logo">
-      <div class="logo-dot"></div>
-      AXIOM CONTROL
-    </div>
-    <nav class="menu">
-      <a routerLink="/dashboard">Dashboard</a>
-      <a href="#tanques">Tanques</a>
-      <a href="#turnos">Turnos</a>
-      <a href="#emergencia">Emergencia</a>
-    </nav>
-    <div class="header-right">
-      <div class="status-bar-mini">
-        <div class="logo-dot"></div>
-        SISTEMA OPERACIONAL
-      </div>
-    </div>
-  </header>
-
   @if (carregando) {
     <div class="loading-state">A carregar dados industriais do Supabase...</div>
   } @else {
-    <main>
-      <div class="section-header" id="tanques">
-        <div class="section-line"></div>
-        <h2 class="titulo-industrial">Painel de Controle: Status dos Tanques</h2>
-      </div>
-
-      <div class="Tanques-geral">
-        @for (tanque of tanques; track tanque.codigo) {
-          <div class="TanqueCard" [ngClass]="tanque.classCard">
-            <div class="tank-label">{{ tanque.codigo }} / {{ tanque.linha }}</div>
-            <div class="tank-name">{{ tanque.nome }}</div>
-            <div class="tank-temp-display" [ngClass]="tanque.classTemp">{{ tanque.temperatura }} C</div>
-            <div class="tank-status" [ngClass]="tanque.classStatus">
-              <span class="status-dot"></span>
-              {{ tanque.statusTexto }}
-            </div>
-            <div class="nivel-label">
-              <span>NIVEL</span>
-              <span>{{ tanque.nivel }}%</span>
-            </div>
-            <div class="barra-fundo">
-              <div
-                class="barra-nivel-dinamica"
-                [ngClass]="tanque.barraClasse"
-                [style.width.%]="tanque.nivel"
-              ></div>
-            </div>
-            <button class="btn-emergencia" type="button" (click)="ativarEStop(tanque)">
-              PARAR LINHA DE ENVASE
-            </button>
-          </div>
-        }
-      </div>
-
-      <div class="section-header">
-        <div class="section-line"></div>
-        <h2 class="titulo-industrial">Graficos de Monitoramento Termico</h2>
-      </div>
-
-      <div class="container-graficos">
-        @for (grafico of graficos; track grafico.codigo) {
-          <section class="painel-grafico">
-            <h3>Grafico do {{ grafico.nome }}<br>{{ grafico.titulo }}</h3>
-            <div class="grafico-barras">
-              @if (grafico.pontos.length) {
-                @for (ponto of grafico.pontos; track ponto.dataRegistro || ponto.horario) {
-                  <div
-                    class="barra"
-                    [class.perigo]="ponto.perigo"
-                    [style.height.%]="ponto.altura"
-                    [title]="ponto.rotulo || ponto.horario"
-                  >
-                    <span>{{ ponto.temperatura }} C</span>
-                  </div>
-                }
-              } @else {
-                <div class="grafico-vazio">Sem registos diarios em {{ grafico.campo }}</div>
-              }
-            </div>
-            <div class="eixo-x">
-              @for (horario of grafico.horarios; track horario) {
-                <span>{{ horario }}</span>
-              }
-            </div>
-          </section>
-        }
-      </div>
-
-      <div class="section-header">
-        <div class="section-line"></div>
-        <h2 class="titulo-industrial">Registro de Ocorrencias do Turno (Log)</h2>
-      </div>
-
-      <section class="log-sistema">
-        <h4>Historico de Eventos e Alarmes - Tempo Real</h4>
-        <ul class="lista-log">
-          @for (log of logs; track log.horario + log.mensagem) {
-            <li [ngClass]="log.tipo">
-              <span class="hora">{{ log.horario }}</span> {{ log.mensagem }}
-            </li>
-          }
-        </ul>
-      </section>
-
-      <div class="section-header" id="turnos">
-        <div class="section-line"></div>
-        <h2 class="titulo-industrial">Gestao de Turnos & Diario de Bordo</h2>
-      </div>
-
-      <section class="turnos-diario">
-        <div class="turno-resumo">
-          <div>
-            <span class="meta-label">Operario atual</span>
-            <strong>{{ turnoAtual?.operario || 'Sem turno em andamento' }}</strong>
-          </div>
-          <div>
-            <span class="meta-label">Horario</span>
-            <strong>{{ turnoAtual?.horario || '--:-- - --:--' }}</strong>
-          </div>
-          <div>
-            <span class="meta-label">Status</span>
-            <strong>{{ turnoAtual?.status || 'indisponivel' }}</strong>
-          </div>
-          <button class="btn-relatorio" type="button" [disabled]="enviandoRelatorio" (click)="testarEnvioRelatorio()">
-            {{ enviandoRelatorio ? 'A enviar relatorio...' : '📧 Testar Envio de Relatorio Semanal' }}
+    <div class="dashboard-shell">
+      <header>
+        <div class="header-left">
+          <button class="sidebar-toggle" type="button" (click)="sidebarAberta = !sidebarAberta" aria-label="Menu">
+            ☰
           </button>
+          <div class="logo">
+            <div class="logo-dot"></div>
+            AXIOM CONTROL
+          </div>
+        </div>
+        <span class="header-badge">PAINEL OPERACIONAL</span>
+        <div class="header-right">
+          <span class="operador-badge">{{ operadorNome || 'Sessão ativa' }}</span>
+          <div class="status-bar-mini">
+            <div class="logo-dot"></div>
+            ONLINE
+          </div>
+        </div>
+      </header>
+
+      <aside class="sidebar" [class.aberta]="sidebarAberta">
+        <nav class="sidebar-nav">
+          <span class="sidebar-label">Navegacao</span>
+          @for (secao of secoesNav; track secao.id) {
+            <button
+              type="button"
+              class="sidebar-link-nav"
+              [class.ativo]="secaoAtiva === secao.id"
+              (click)="navegarPara(secao.id)"
+            >
+              {{ secao.label }}
+            </button>
+          }
+        </nav>
+
+        <div class="sidebar-card">
+          <span class="meta-label">Turno atual</span>
+          <strong class="sidebar-valor">{{ turnoAtual?.operario || 'Sem turno' }}</strong>
+          <small>{{ turnoAtual?.horario || '--:-- - --:--' }} · {{ turnoAtual?.status || 'indisponivel' }}</small>
+          @if (turnoIndisponivelMsg) {
+            <small>{{ turnoIndisponivelMsg }}</small>
+          }
         </div>
 
+        <div class="sidebar-card sidebar-stats">
+          <div>
+            <span class="meta-label">Tanques</span>
+            <strong>{{ tanquesAtivos }}/{{ tanques.length || 3 }}</strong>
+          </div>
+          <div>
+            <span class="meta-label">Alertas</span>
+            <strong>{{ alertasAtivos }}</strong>
+          </div>
+          <div>
+            <span class="meta-label">OEE</span>
+            <strong>{{ kpis.eficienciaOee }}%</strong>
+          </div>
+        </div>
+
+        <button class="btn-relatorio sidebar-btn" type="button" [disabled]="enviandoRelatorio" (click)="testarEnvioRelatorio()">
+          {{ enviandoRelatorio ? 'A enviar...' : 'Relatorio Semanal (PDF)' }}
+        </button>
         @if (mensagemRelatorio) {
-          <p class="mensagem-envio">{{ mensagemRelatorio }}</p>
+          <p class="mensagem-envio sidebar-msg">{{ mensagemRelatorio }}</p>
         }
 
-        <ul class="lista-log diario-feed">
-          @if (logsTurno.length) {
-            @for (log of logsTurno; track log.horario + log.mensagem) {
+        <div class="sidebar-card sidebar-log">
+          <span class="meta-label">Eventos recentes</span>
+          <ul class="lista-log">
+            @for (log of logs.slice(0, 4); track log.horario + log.mensagem) {
               <li [ngClass]="log.tipo">
                 <span class="hora">{{ log.horario }}</span> {{ log.mensagem }}
               </li>
+            } @empty {
+              <li class="info">
+                <span class="hora">[--:--]</span> Aguardando eventos...
+              </li>
             }
-          } @else {
-            <li class="info">
-              <span class="hora">[--:--:--]</span> Nenhum registo encontrado para o turno atual.
-            </li>
+          </ul>
+        </div>
+
+        <div class="sidebar-actions">
+          @if (isAdmin) {
+            <a routerLink="/admin" class="sidebar-link">Administracao</a>
           }
-        </ul>
-      </section>
-
-      <div class="section-header" id="emergencia">
-        <div class="section-line"></div>
-        <h2 class="titulo-industrial">Relatar Ocorrencia</h2>
-      </div>
-
-      <div class="relatar-section">
-        <h3>Enviar Notificacao</h3>
-        <div class="RelatarCaixa">
-          <input
-            type="text"
-            placeholder="Descreva o problema ocorrido..."
-            [(ngModel)]="descricaoOcorrencia"
-          />
+          <a routerLink="/" class="sidebar-link">Pagina inicial</a>
+          <button type="button" class="sidebar-link sidebar-sair" (click)="sair()">Sair</button>
         </div>
-        <div class="QualTropaGeral">
-          <div class="Qualtropa">
-            <label>
-              <input type="checkbox" [(ngModel)]="tanquesSelecionados['Tanque 01']" />
-              <span class="tanque1">Tanque 01</span>
-            </label>
+      </aside>
+
+      @if (sidebarAberta) {
+        <div class="sidebar-overlay" (click)="sidebarAberta = false"></div>
+      }
+
+      <main>
+        <div class="section-header" id="kpis">
+          <div class="section-line"></div>
+          <h2 class="titulo-industrial">Indicadores de Producao</h2>
+        </div>
+
+        <p class="progresso-dia">{{ progressoDiaLabel }}</p>
+
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-temperatura">
+            <span class="kpi-label">Temperatura Media</span>
+            <strong class="kpi-valor">{{ kpis.temperaturaMedia }}°C</strong>
+            <small>{{ kpis.dataExibida }}</small>
           </div>
-          <div class="Qualtropa">
-            <label>
-              <input type="checkbox" [(ngModel)]="tanquesSelecionados['Tanque 02']" />
-              <span class="tanque2">Tanque 02</span>
-            </label>
+          <div class="kpi-card kpi-nivel">
+            <span class="kpi-label">Nivel do Fluido</span>
+            <strong class="kpi-valor">{{ kpis.nivel }}%</strong>
+            <small>Capacidade operacional</small>
           </div>
-          <div class="Qualtropa">
-            <label>
-              <input type="checkbox" [(ngModel)]="tanquesSelecionados['Tanque 03']" />
-              <span class="tanque3">Tanque 03</span>
-            </label>
+          <div class="kpi-card kpi-eficiencia">
+            <span class="kpi-label">Eficiencia (OEE)</span>
+            <strong class="kpi-valor">{{ kpis.eficienciaOee }}%</strong>
+            <small>Calculado por alertas e temperatura</small>
+          </div>
+          <div class="kpi-card kpi-alertas">
+            <span class="kpi-label">Alertas do Dia</span>
+            <strong class="kpi-valor">{{ kpis.alertas }}</strong>
+            <small>Registos em producao_diaria</small>
           </div>
         </div>
-        <button class="EnviarNoti" type="button" [disabled]="enviandoOcorrencia" (click)="enviarNotificacao()">
-          {{ enviandoOcorrencia ? 'Enviando...' : 'Enviar Notificacao para o Operador' }}
-        </button>
-        @if (mensagemEnvio) {
-          <p class="mensagem-envio">{{ mensagemEnvio }}</p>
-        }
-      </div>
-    </main>
 
-    <footer>
-      <div class="redes-socias">
-        <p>Redes Sociais:</p>
-        <a href="https://www.instagram.com/afyyzer" target="_blank" rel="noopener noreferrer">Instagram</a>
-      </div>
-      <p class="Copyright">(c) 2026 Cadax | Todos os direitos reservados.</p>
-    </footer>
+        <div class="section-header" id="tanques">
+          <div class="section-line"></div>
+          <h2 class="titulo-industrial">Status dos Tanques</h2>
+        </div>
+
+        <div class="Tanques-geral">
+          @for (tanque of tanques; track tanque.codigo) {
+            <div class="TanqueCard" [ngClass]="tanque.classCard">
+              <div class="tank-label">{{ tanque.codigo }} / {{ tanque.linha }}</div>
+              <div class="tank-name">{{ tanque.nome }}</div>
+              <div class="tank-temp-display" [ngClass]="tanque.classTemp">{{ tanque.temperatura }}°C</div>
+              <div class="tank-status" [ngClass]="tanque.classStatus">
+                <span class="status-dot"></span>
+                {{ tanque.statusTexto }}
+              </div>
+              <div class="nivel-label">
+                <span>NIVEL</span>
+                <span>{{ tanque.nivel }}%</span>
+              </div>
+              <div class="barra-fundo">
+                <div
+                  class="barra-nivel-dinamica"
+                  [ngClass]="tanque.barraClasse"
+                  [style.width.%]="tanque.nivel"
+                ></div>
+              </div>
+              <button class="btn-emergencia" type="button" (click)="ativarEStop(tanque)">
+                PARAR LINHA DE ENVASE
+              </button>
+            </div>
+          }
+        </div>
+
+        <div class="section-header" id="graficos">
+          <div class="section-line"></div>
+          <h2 class="titulo-industrial">Monitoramento Termico</h2>
+        </div>
+
+        <div class="filtros-grafico">
+          <div class="filtro-mes">
+            <label for="filtro-mes">Mes</label>
+            <select id="filtro-mes" [(ngModel)]="mesSelecionado" (ngModelChange)="onMesSelecionadoChange()">
+              @for (mes of mesesDisponiveis; track mes.valor) {
+                <option [value]="mes.valor">{{ mes.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="filtro-mes">
+            <label for="filtro-semana">Semana</label>
+            <select id="filtro-semana" [(ngModel)]="semanaSelecionada" (ngModelChange)="onSemanaSelecionadaChange()">
+              @for (semana of semanasDisponiveis; track semana.valor) {
+                <option [ngValue]="semana.valor">{{ semana.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="grafico-legenda">
+          <span class="legenda-item barra-t1">TK-001 — Misturador</span>
+          <span class="legenda-item barra-t2">TK-002 — Reator</span>
+          <span class="legenda-item barra-t3">TK-003 — Armazenamento</span>
+        </div>
+
+        <div class="container-graficos">
+          @if (graficoDiasSemana.length) {
+            <section class="painel-grafico painel-grafico-semanal">
+              <h3>Temperatura diaria — {{ tituloGraficoSemana }}</h3>
+              <div class="grafico-semanal-grid">
+                @for (dia of graficoDiasSemana; track $index) {
+                  <div class="grafico-dia-grupo" [class.sem-dados]="dia.semDados">
+                    <div class="grafico-dia-titulo">
+                      <span class="grafico-dia-numero">{{ dia.label }}</span>
+                      @if (dia.diaSemana) {
+                        <span class="grafico-dia-semana">{{ dia.diaSemana }}</span>
+                      }
+                    </div>
+                    @if (dia.semDados) {
+                      <div class="grafico-dia-vazio">—</div>
+                    } @else {
+                      <div class="grafico-barras-grupo">
+                        @for (barra of dia.barras; track barra.codigo) {
+                          <div
+                            class="barra"
+                            [ngClass]="barra.classe"
+                            [class.perigo]="barra.perigo"
+                            [style.height.%]="barra.altura"
+                            [title]="barra.nome + ': ' + barra.temperatura + '°C'"
+                          >
+                            <span>{{ barra.temperatura }}°</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </section>
+          } @else {
+            <div class="grafico-vazio">Sem registos em producao_diaria para o mes selecionado.</div>
+          }
+        </div>
+
+        <div class="section-header" id="turnos">
+          <div class="section-line"></div>
+          <h2 class="titulo-industrial">Diario de Bordo do Turno</h2>
+        </div>
+
+        <section class="turnos-diario">
+          <div class="escala-grid escala-compacta">
+            @for (item of escalaTurnos; track item.turno) {
+              <div class="escala-card" [class.ativo]="item.ativo">
+                <strong>{{ item.turno }}</strong>
+                <span>{{ item.operario }}</span>
+                <small>{{ item.horario }}</small>
+                @if (item.ativo) {
+                  <span class="escala-badge">ATIVO</span>
+                }
+              </div>
+            }
+          </div>
+
+          <ul class="lista-log diario-feed">
+            @if (logsTurno.length) {
+              @for (log of logsTurno; track log.horario + log.mensagem) {
+                <li [ngClass]="log.tipo">
+                  <span class="hora">{{ log.horario }}</span> {{ log.mensagem }}
+                </li>
+              }
+            } @else {
+              <li class="info">
+                <span class="hora">[--:--:--]</span> Nenhum registo encontrado para o turno atual.
+              </li>
+            }
+          </ul>
+        </section>
+
+        <div class="section-header" id="emergencia">
+          <div class="section-line"></div>
+          <h2 class="titulo-industrial">Relatar Ocorrencia</h2>
+        </div>
+
+        <div class="relatar-section">
+          <p class="relatar-hint">O relato sera incluido no PDF semanal de ocorrencias.</p>
+          <div class="RelatarCaixa">
+            <input
+              type="text"
+              placeholder="Descreva o problema ocorrido..."
+              [(ngModel)]="descricaoOcorrencia"
+            />
+          </div>
+          <div class="QualTropaGeral">
+            <div class="Qualtropa">
+              <label>
+                <input type="checkbox" [(ngModel)]="tanquesSelecionados['Tanque 01']" />
+                <span class="tanque1">Tanque 01</span>
+              </label>
+            </div>
+            <div class="Qualtropa">
+              <label>
+                <input type="checkbox" [(ngModel)]="tanquesSelecionados['Tanque 02']" />
+                <span class="tanque2">Tanque 02</span>
+              </label>
+            </div>
+            <div class="Qualtropa">
+              <label>
+                <input type="checkbox" [(ngModel)]="tanquesSelecionados['Tanque 03']" />
+                <span class="tanque3">Tanque 03</span>
+              </label>
+            </div>
+          </div>
+          <button class="EnviarNoti" type="button" [disabled]="enviandoOcorrencia" (click)="enviarNotificacao()">
+            {{ enviandoOcorrencia ? 'Enviando...' : 'Enviar Notificacao' }}
+          </button>
+          @if (mensagemEnvio) {
+            <p class="mensagem-envio">{{ mensagemEnvio }}</p>
+          }
+        </div>
+      </main>
+    </div>
   }
 
   <div class="statusbar">
@@ -207,7 +316,7 @@
     </div>
     <div class="statusbar-item">
       <div class="statusbar-dot sb-green"></div>
-      TANQUES ATIVOS <strong>{{ tanquesAtivos }}/{{ tanques.length || 3 }}</strong>
+      TANQUES <strong>{{ tanquesAtivos }}/{{ tanques.length || 3 }}</strong>
     </div>
     <div class="statusbar-item">
       <div class="statusbar-dot sb-orange"></div>
@@ -215,11 +324,11 @@
     </div>
     <div class="statusbar-item">
       <div class="statusbar-dot sb-purple"></div>
-      IA PREDITIVA <strong>ATIVA</strong>
+      OEE <strong>{{ kpis.eficienciaOee }}%</strong>
     </div>
     <div class="statusbar-right">
       <div class="statusbar-item">UPTIME <strong>{{ uptime }}</strong></div>
-      <div class="statusbar-item">ULTIMO SYNC <strong>{{ ultimoSync }}</strong></div>
+      <div class="statusbar-item">SYNC <strong>{{ ultimoSync }}</strong></div>
     </div>
   </div>
 </div>

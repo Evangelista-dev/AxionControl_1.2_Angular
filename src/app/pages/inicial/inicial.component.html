@@ -1,3 +1,4 @@
+<div class="landing-page">
 <nav>
     <div class="nav-logo">
         <div class="nav-logo-dot"></div>
@@ -15,7 +16,7 @@
     </div>
     <div class="status-item">
         <div class="status-dot dot-green"></div>
-        TANQUES ATIVOS <span class="status-value">12/12</span>
+        TANQUES ATIVOS <span class="status-value">3/3</span>
     </div>
     <div class="status-item">
         <div class="status-dot dot-yellow"></div>
@@ -49,7 +50,7 @@
             controle total da sua operação em tempo real.
         </p>
         <div class="hero-actions reveal reveal-delay-3">
-            <a routerLink="/admin" class="btn-primary">
+            <a routerLink="/login" class="btn-primary">
                 Acessar Dashboard
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                     <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
@@ -120,9 +121,9 @@
                         <span>TEMPO REAL</span>
                     </div>
 
-                    @for (log of mensagensLog; track log.msg) {
+                    @for (log of logsVisiveis; track log.time + log.msg) {
                     <div class="log-entry">
-                        <span class="log-time">14:30</span>
+                        <span class="log-time">{{ log.time }}</span>
                         <span class="log-msg">{{ log.msg }}</span>
                         <span class="log-badge" [ngClass]="log.badge">{{ log.label }}</span>
                     </div>
@@ -135,9 +136,15 @@
 
 <div class="ticker-wrap">
     <div class="ticker">
-        <div class="ticker-item">Tanque-01 <span class="t-val" id="tick-tk01">44°C</span></div>
-        <div class="ticker-item">Tanque-02 <span class="t-val" style="color: #f59e0b;">96°C ⚠ ATENÇÃO</span></div>
-        <div class="ticker-item">Tanque-03 <span class="t-val">23°C</span></div>
+        <div class="ticker-item">Tanque-01 <span class="t-val">{{ tanques[0].temp }}°C</span></div>
+        <div class="ticker-item">Tanque-02 <span class="t-val" style="color: #f59e0b;">{{ tanques[1].temp }}°C ⚠ ATENÇÃO</span></div>
+        <div class="ticker-item">Tanque-03 <span class="t-val">{{ tanques[2].temp }}°C</span></div>
+        <div class="ticker-item">MISTURADOR-01 <span class="t-val">ATIVO</span></div>
+        <div class="ticker-item">REATOR-01 <span class="t-val">OPERANDO (40%)</span></div>
+        <div class="ticker-item">UPTIME SISTEMA <span class="t-val">99.97%</span></div>
+        <div class="ticker-item">Tanque-01 <span class="t-val">{{ tanques[0].temp }}°C</span></div>
+        <div class="ticker-item">Tanque-02 <span class="t-val" style="color: #f59e0b;">{{ tanques[1].temp }}°C ⚠ ATENÇÃO</span></div>
+        <div class="ticker-item">Tanque-03 <span class="t-val">{{ tanques[2].temp }}°C</span></div>
         <div class="ticker-item">MISTURADOR-01 <span class="t-val">ATIVO</span></div>
         <div class="ticker-item">REATOR-01 <span class="t-val">OPERANDO (40%)</span></div>
         <div class="ticker-item">UPTIME SISTEMA <span class="t-val">99.97%</span></div>
@@ -167,3 +174,4 @@
         </div>
     </div>
 </section>
+</div>

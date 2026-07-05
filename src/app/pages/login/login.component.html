@@ -1,0 +1,34 @@
+<div class="login-wrapper">
+  <div class="login-box">
+    <h2>Acesso de Operador</h2>
+    <p class="login-desc">
+      Informe o ID gerado no cadastro (ex.: <strong>AX101</strong>) para abrir o dashboard industrial.
+    </p>
+
+    <input
+      type="text"
+      [(ngModel)]="operadorId"
+      (keyup.enter)="entrar()"
+      placeholder="ID do operador"
+      class="form-input"
+      autocomplete="username"
+      autocapitalize="characters"
+      spellcheck="false"
+    />
+
+    <button type="button" (click)="entrar()" class="btn-primary" [disabled]="carregando">
+      {{ carregando ? 'Verificando...' : 'Entrar no Dashboard' }}
+    </button>
+
+    <button routerLink="/" class="btn-secondary">Voltar</button>
+
+    <p class="login-footer">
+      É administrador?
+      <a routerLink="/admin">Acessar painel admin</a>
+    </p>
+
+    @if (errorMessage) {
+      <p class="error-msg">{{ errorMessage }}</p>
+    }
+  </div>
+</div>

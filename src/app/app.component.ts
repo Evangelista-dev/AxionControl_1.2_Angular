@@ -10,5 +10,5 @@ import { RouterOutlet } from '@angular/router';
   styleUrl: './app.component.css' 
 })
 export class AppComponent {
-  title = 'AxionControl_1.1_Angular';
+  title = 'Axiom Control';
 }

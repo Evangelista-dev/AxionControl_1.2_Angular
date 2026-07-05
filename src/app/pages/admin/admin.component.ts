@@ -1,8 +1,11 @@
 import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router'; // Adicionado o Router aqui
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { SupabaseService } from '../../services/supabase.service';
+import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
+import { TURNOS_PRESET, formatarHorarioTurno } from '../../utils/turno.util';
 
 @Component({
   selector: 'app-admin',
@@ -21,6 +24,11 @@ export class AdminComponent implements OnInit, OnDestroy {
   novoNome = '';
   novoCpf = '';
   termoBusca = '';
+  turnosPreset = TURNOS_PRESET;
+  turnoPresetIndex = 0;
+  turnoNome = TURNOS_PRESET[0].turno_nome;
+  turnoInicio = TURNOS_PRESET[0].turno_inicio;
+  turnoFim = TURNOS_PRESET[0].turno_fim;
 
   // Estado da Interface
   tabelaVisivel = false;
@@ -41,11 +49,24 @@ export class AdminComponent implements OnInit, OnDestroy {
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private supabaseService: SupabaseService,
-    private router: Router 
+    private authService: AuthService,
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
+      this.route.queryParamMap.subscribe((params) => {
+        if (params.get('destino') === 'dashboard') {
+          void this.router.navigate(['/login']);
+        }
+      });
+
+      if (this.authService.isAdminLoggedIn()) {
+        this.isAuthorized = true;
+        this.carregarUsuarios();
+      }
+
       this.atualizarRelogio();
       this.timeInterval = setInterval(() => this.atualizarRelogio(), 1000);
     }
@@ -65,32 +86,29 @@ export class AdminComponent implements OnInit, OnDestroy {
     const entrada = this.adminPassword.trim();
 
     if (!entrada) {
-      this.errorMessage = 'Por favor, insira uma credencial.';
+      this.errorMessage = 'Informe a senha de administrador.';
       return;
     }
 
-    // CASO A: É a senha mestre do Administrador
-    if (entrada === 'admin123') { 
-      this.isAuthorized = true;
-      this.errorMessage = '';
-      await this.carregarUsuarios(); // Carrega do banco real
+    if (entrada !== environment.adminPassword) {
+      this.errorMessage = 'Senha de administrador incorreta.';
       return;
     }
 
-    // CASO B: Não é a senha admin, então testa se é um ID de Operador no Supabase
-    try {
-      const operario = await this.supabaseService.verificarId(entrada.toUpperCase());
+    this.authService.clearOperador();
+    this.isAuthorized = true;
+    this.authService.setAdminSession();
+    this.errorMessage = '';
+    this.adminPassword = '';
+    await this.carregarUsuarios();
+  }
 
-      if (operario) {
-        this.errorMessage = '';
-        // MÁGICA DO ANGULAR: Redireciona o operador para a página de dashboard
-        this.router.navigate(['/dashboard']);
-      } else {
-        this.errorMessage = 'ID ou Senha incorreta! Acesso negado.';
-      }
-    } catch (error) {
-      this.errorMessage = 'Erro ao conectar com o banco de dados.';
-    }
+  sairAdmin() {
+    this.authService.clearAdmin();
+    this.isAuthorized = false;
+    this.usuarios = [];
+    this.usuariosFiltrados = [];
+    this.tabelaVisivel = false;
   }
 
   // 2. CARREGAR DO SUPABASE REAL
@@ -106,23 +124,34 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   // 3. SALVAR NO SUPABASE PERSISTENTE
   async criarConta() {
-    if (!this.novoNome || !this.novoCpf) {
+    if (!this.novoNome.trim() || !this.novoCpf.trim()) {
       this.exibirToast('Preencha o nome e o CPF do usuário.', 'error');
       return;
     }
 
-    // Gerador de ID aleatório de 6 caracteres maiúsculos
-    const id = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
+    const cpfInformado = this.novoCpf.trim();
+    const id = await this.gerarIdUnico();
+    const turno = this.obterTurnoFormulario();
+
+    if (!turno.turno_nome.trim() || !turno.turno_inicio || !turno.turno_fim) {
+      this.exibirToast('Defina o nome e o horário do turno.', 'error');
+      return;
+    }
+
     try {
-      // Cadastra na tabela do banco em tempo real
-      const sucesso = await this.supabaseService.cadastrarOperario(id, this.novoNome, this.novoCpf);
+      const sucesso = await this.supabaseService.cadastrarOperario(
+        id,
+        this.novoNome.trim(),
+        cpfInformado,
+        turno
+      );
 
       if (sucesso) {
         this.exibirToast(`Usuário "${this.novoNome}" criado — ID: ${id}`, 'success');
         
         this.novoNome = '';
         this.novoCpf = '';
+        this.aplicarPresetTurno(0);
         
         // Atualiza a lista vinda da nuvem (garante que não some ao sair)
         await this.carregarUsuarios();
@@ -184,12 +213,58 @@ export class AdminComponent implements OnInit, OnDestroy {
       this.usuariosFiltrados = [...this.usuarios];
     } else {
       const termo = this.termoBusca.toLowerCase();
-      this.usuariosFiltrados = this.usuarios.filter(u => 
-        (u.nome && u.nome.toLowerCase().includes(termo)) || 
-        (u.cpf && u.cpf.includes(termo)) || 
+      this.usuariosFiltrados = this.usuarios.filter(u =>
+        (u.nome && u.nome.toLowerCase().includes(termo)) ||
+        (u.cpf && u.cpf.includes(termo)) ||
         (u.id_gerado && u.id_gerado.toLowerCase().includes(termo))
       );
     }
+  }
+
+  formatarCpfExibicao(cpf: string): string {
+    return cpf?.trim() || '—';
+  }
+
+  formatarHorarioUsuario(usuario: { turno_inicio?: string; turno_fim?: string }): string {
+    const inicio = String(usuario.turno_inicio ?? '06:00').slice(0, 5);
+    const fim = String(usuario.turno_fim ?? '14:00').slice(0, 5);
+    return formatarHorarioTurno(inicio, fim);
+  }
+
+  aplicarPresetTurno(indice: number | string) {
+    const index = Number(indice);
+
+    if (index >= 0 && index < this.turnosPreset.length) {
+      const preset = this.turnosPreset[index];
+      this.turnoNome = preset.turno_nome;
+      this.turnoInicio = preset.turno_inicio;
+      this.turnoFim = preset.turno_fim;
+      return;
+    }
+
+    this.turnoNome = 'Personalizado';
+  }
+
+  private obterTurnoFormulario() {
+    return {
+      turno_nome: this.turnoNome.trim(),
+      turno_inicio: this.turnoInicio.slice(0, 5),
+      turno_fim: this.turnoFim.slice(0, 5)
+    };
+  }
+
+  private async gerarIdUnico(): Promise<string> {
+    const existentes = await this.supabaseService.listarOperarios();
+    const ids = new Set(existentes.map((operario) => String(operario.id_gerado).toUpperCase()));
+
+    for (let tentativa = 0; tentativa < 20; tentativa++) {
+      const id = Math.random().toString(36).substring(2, 8).toUpperCase();
+      if (!ids.has(id)) {
+        return id;
+      }
+    }
+
+    return `${Date.now().toString(36).slice(-6).toUpperCase()}`;
   }
 
   exibirToast(msg: string, tipo: 'success' | 'error') {
