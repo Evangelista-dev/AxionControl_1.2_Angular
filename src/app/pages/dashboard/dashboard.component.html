@@ -7,8 +7,8 @@
     <nav class="menu">
       <a routerLink="/dashboard">Dashboard</a>
       <a href="#tanques">Tanques</a>
-      <a routerLink="/">Relatórios</a>
-      <a href="#emergencia">Emergência</a>
+      <a href="#turnos">Turnos</a>
+      <a href="#emergencia">Emergencia</a>
     </nav>
     <div class="header-right">
       <div class="status-bar-mini">
@@ -32,13 +32,13 @@
           <div class="TanqueCard" [ngClass]="tanque.classCard">
             <div class="tank-label">{{ tanque.codigo }} / {{ tanque.linha }}</div>
             <div class="tank-name">{{ tanque.nome }}</div>
-            <div class="tank-temp-display" [ngClass]="tanque.classTemp">{{ tanque.temperatura }}°C</div>
+            <div class="tank-temp-display" [ngClass]="tanque.classTemp">{{ tanque.temperatura }} C</div>
             <div class="tank-status" [ngClass]="tanque.classStatus">
               <span class="status-dot"></span>
               {{ tanque.statusTexto }}
             </div>
             <div class="nivel-label">
-              <span>NÍVEL</span>
+              <span>NIVEL</span>
               <span>{{ tanque.nivel }}%</span>
             </div>
             <div class="barra-fundo">
@@ -48,29 +48,36 @@
                 [style.width.%]="tanque.nivel"
               ></div>
             </div>
-            <button class="btn-emergencia" type="button" (click)="ativarEStop(tanque)">⚠ E-STOP</button>
+            <button class="btn-emergencia" type="button" (click)="ativarEStop(tanque)">
+              PARAR LINHA DE ENVASE
+            </button>
           </div>
         }
       </div>
 
       <div class="section-header">
         <div class="section-line"></div>
-        <h2 class="titulo-industrial">Gráficos de Monitoramento Térmico</h2>
+        <h2 class="titulo-industrial">Graficos de Monitoramento Termico</h2>
       </div>
 
       <div class="container-graficos">
         @for (grafico of graficos; track grafico.codigo) {
           <section class="painel-grafico">
-            <h3>Histórico de Temperatura<br>{{ grafico.nome }} — Últimas 5 horas</h3>
+            <h3>Grafico do {{ grafico.nome }}<br>{{ grafico.titulo }}</h3>
             <div class="grafico-barras">
-              @for (ponto of grafico.pontos; track ponto.horario) {
-                <div
-                  class="barra"
-                  [class.perigo]="ponto.perigo"
-                  [style.height.%]="ponto.altura"
-                >
-                  <span>{{ ponto.temperatura }}°C</span>
-                </div>
+              @if (grafico.pontos.length) {
+                @for (ponto of grafico.pontos; track ponto.dataRegistro || ponto.horario) {
+                  <div
+                    class="barra"
+                    [class.perigo]="ponto.perigo"
+                    [style.height.%]="ponto.altura"
+                    [title]="ponto.rotulo || ponto.horario"
+                  >
+                    <span>{{ ponto.temperatura }} C</span>
+                  </div>
+                }
+              } @else {
+                <div class="grafico-vazio">Sem registos diarios em {{ grafico.campo }}</div>
               }
             </div>
             <div class="eixo-x">
@@ -84,11 +91,11 @@
 
       <div class="section-header">
         <div class="section-line"></div>
-        <h2 class="titulo-industrial">Registro de Ocorrências do Turno (Log)</h2>
+        <h2 class="titulo-industrial">Registro de Ocorrencias do Turno (Log)</h2>
       </div>
 
       <section class="log-sistema">
-        <h4>Histórico de Eventos e Alarmes — Tempo Real</h4>
+        <h4>Historico de Eventos e Alarmes - Tempo Real</h4>
         <ul class="lista-log">
           @for (log of logs; track log.horario + log.mensagem) {
             <li [ngClass]="log.tipo">
@@ -98,13 +105,56 @@
         </ul>
       </section>
 
+      <div class="section-header" id="turnos">
+        <div class="section-line"></div>
+        <h2 class="titulo-industrial">Gestao de Turnos & Diario de Bordo</h2>
+      </div>
+
+      <section class="turnos-diario">
+        <div class="turno-resumo">
+          <div>
+            <span class="meta-label">Operario atual</span>
+            <strong>{{ turnoAtual?.operario || 'Sem turno em andamento' }}</strong>
+          </div>
+          <div>
+            <span class="meta-label">Horario</span>
+            <strong>{{ turnoAtual?.horario || '--:-- - --:--' }}</strong>
+          </div>
+          <div>
+            <span class="meta-label">Status</span>
+            <strong>{{ turnoAtual?.status || 'indisponivel' }}</strong>
+          </div>
+          <button class="btn-relatorio" type="button" [disabled]="enviandoRelatorio" (click)="testarEnvioRelatorio()">
+            {{ enviandoRelatorio ? 'A enviar relatorio...' : '📧 Testar Envio de Relatorio Semanal' }}
+          </button>
+        </div>
+
+        @if (mensagemRelatorio) {
+          <p class="mensagem-envio">{{ mensagemRelatorio }}</p>
+        }
+
+        <ul class="lista-log diario-feed">
+          @if (logsTurno.length) {
+            @for (log of logsTurno; track log.horario + log.mensagem) {
+              <li [ngClass]="log.tipo">
+                <span class="hora">{{ log.horario }}</span> {{ log.mensagem }}
+              </li>
+            }
+          } @else {
+            <li class="info">
+              <span class="hora">[--:--:--]</span> Nenhum registo encontrado para o turno atual.
+            </li>
+          }
+        </ul>
+      </section>
+
       <div class="section-header" id="emergencia">
         <div class="section-line"></div>
-        <h2 class="titulo-industrial">Relatar Ocorrência</h2>
+        <h2 class="titulo-industrial">Relatar Ocorrencia</h2>
       </div>
 
       <div class="relatar-section">
-        <h3>Enviar Notificação</h3>
+        <h3>Enviar Notificacao</h3>
         <div class="RelatarCaixa">
           <input
             type="text"
@@ -133,14 +183,12 @@
           </div>
         </div>
         <button class="EnviarNoti" type="button" [disabled]="enviandoOcorrencia" (click)="enviarNotificacao()">
-          {{ enviandoOcorrencia ? 'Enviando...' : 'Enviar Notificação para o Operador' }}
+          {{ enviandoOcorrencia ? 'Enviando...' : 'Enviar Notificacao para o Operador' }}
         </button>
         @if (mensagemEnvio) {
           <p class="mensagem-envio">{{ mensagemEnvio }}</p>
         }
       </div>
-
-     
     </main>
 
     <footer>
@@ -148,7 +196,7 @@
         <p>Redes Sociais:</p>
         <a href="https://www.instagram.com/afyyzer" target="_blank" rel="noopener noreferrer">Instagram</a>
       </div>
-      <p class="Copyright">© 2026 Cadax | Todos os direitos reservados.</p>
+      <p class="Copyright">(c) 2026 Cadax | Todos os direitos reservados.</p>
     </footer>
   }
 
@@ -171,7 +219,7 @@
     </div>
     <div class="statusbar-right">
       <div class="statusbar-item">UPTIME <strong>{{ uptime }}</strong></div>
-      <div class="statusbar-item">ÚLTIMO SYNC <strong>{{ ultimoSync }}</strong></div>
+      <div class="statusbar-item">ULTIMO SYNC <strong>{{ ultimoSync }}</strong></div>
     </div>
   </div>
 </div>

@@ -7,7 +7,7 @@ export interface OperadorTurno {
 }
 
 export type StatusTanque = 'normal' | 'critico' | 'manutencao';
-export type TipoLog = 'info' | 'sucesso' | 'alerta' | 'erro';
+export type TipoLog = 'info' | 'sucesso' | 'alerta' | 'erro' | 'critico';
 export type TipoProjecaoIa = 'predicao' | 'alerta-moderado' | 'alerta-critico';
 
 export interface TanqueStatus {
@@ -23,6 +23,8 @@ export interface TanqueStatus {
 export interface HistoricoTemperaturaPonto {
   temperatura: number;
   horario: string;
+  dataRegistro?: string;
+  rotulo?: string;
   perigo?: boolean;
 }
 

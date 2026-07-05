@@ -20,10 +20,27 @@ interface TanqueView extends TanqueStatus {
 }
 
 interface GraficoTanqueView {
-  codigo: string;
-  nome: string;
+  titulo: string;
   pontos: Array<HistoricoTemperaturaPonto & { altura: number }>;
   horarios: string[];
+}
+
+interface TurnoAtualView {
+  id: string | number;
+  operario: string;
+  horario: string;
+  status: string;
+  turno: string;
+}
+
+interface TurnoEscalaView {
+  id: string | number;
+  operario: string;
+  turno: string;
+  horario: string;
+  inicio: number;
+  fim: number;
+  ativo: boolean;
 }
 
 @Component({
@@ -37,10 +54,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   tanques: TanqueView[] = [];
   graficos: GraficoTanqueView[] = [];
   logs: LogOcorrencia[] = [];
+  logsTurno: LogOcorrencia[] = [];
   projecoesIa: ProjecaoIa[] = [];
+  turnoAtual: TurnoAtualView | null = null;
+  escalaTurnos: TurnoEscalaView[] = [];
+  logoTurno = 'AXIOM CONTROL';
 
   carregando = true;
   enviandoOcorrencia = false;
+  enviandoRelatorio = false;
   descricaoOcorrencia = '';
   tanquesSelecionados: Record<string, boolean> = {
     'Tanque 01': false,
@@ -53,6 +75,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   uptime = '99.97%';
   ultimoSync = 'agora';
   mensagemEnvio = '';
+  mensagemRelatorio = '';
 
   private ultimoSyncEm = Date.now();
   private syncInterval: ReturnType<typeof setInterval> | null = null;
@@ -81,10 +104,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   async carregarDashboard() {
     this.carregando = true;
 
-    const [tanques, logs, projecoes] = await Promise.all([
+    const [tanques, logs, projecoes, operariosTurno] = await Promise.all([
       this.supabaseService.obterStatusTanques(),
       this.supabaseService.obterLogOcorrencias(),
-      this.supabaseService.obterProjecoesIa()
+      this.supabaseService.obterProjecoesIa(),
+      this.supabaseService.obterOperariosParaTurnos()
     ]);
 
     this.tanques = tanques.map((tanque) => ({
@@ -94,15 +118,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.logs = logs;
     this.projecoesIa = projecoes;
+    this.escalaTurnos = this.montarEscalaTurnos(operariosTurno);
+    this.atualizarTurnoEmTempoReal();
+    this.logsTurno = this.turnoAtual ? await this.supabaseService.obterLogsDoTurno(this.turnoAtual.id) : [];
 
-    const graficos = await Promise.all(
-      this.tanques.map(async (tanque) => {
-        const pontos = await this.supabaseService.obterHistoricoTemperatura(tanque.codigo);
-        return this.montarGrafico(tanque, pontos);
-      })
-    );
-
-    this.graficos = graficos;
+    const pontosSemana = await this.supabaseService.obterMediaSemanalTanques();
+    this.graficos = [this.montarGraficoSemanal(pontosSemana)];
     this.recalcularIndicadores();
     this.ultimoSyncEm = Date.now();
     this.ultimoSync = 'agora';
@@ -139,12 +160,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.enviandoOcorrencia = false;
   }
 
-  ativarEStop(tanque: TanqueView) {
+  async ativarEStop(tanque: TanqueView) {
     const resposta = window.prompt('Digite o código de segurança para ativar o E-Stop:');
 
     if (resposta === 'senhabraba') {
       window.alert(`E-Stop ativado em ${tanque.nome}: O sistema foi desligado com sucesso.`);
+
+      if (this.turnoAtual) {
+        await this.supabaseService.adicionarLog(
+          this.turnoAtual.id,
+          'Paragem de Emergencia acionada na linha principal',
+          'critico'
+        );
+        this.logsTurno = await this.supabaseService.obterLogsDoTurno(this.turnoAtual.id);
+      }
     }
+  }
+
+  async testarEnvioRelatorio() {
+    this.enviandoRelatorio = true;
+    this.mensagemRelatorio = '';
+
+    const sucesso = await this.supabaseService.enviarRelatorioEmail();
+
+    this.mensagemRelatorio = sucesso
+      ? 'Relatorio semanal enviado para afonso.oliveira2301@gmail.com.'
+      : 'Falha ao enviar relatorio semanal. Verifique a Edge Function send-weekly-pdf.';
+    this.enviandoRelatorio = false;
   }
 
   classeProjecaoIa(tipo: ProjecaoIa['tipo']): string {
@@ -158,7 +200,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  private montarGrafico(tanque: TanqueView, pontos: HistoricoTemperaturaPonto[]): GraficoTanqueView {
+  private montarGraficoSemanal(pontos: HistoricoTemperaturaPonto[]): GraficoTanqueView {
     const pontosComAltura = pontos.map((ponto) => ({
       ...ponto,
       altura: calcularAlturaBarra(ponto.temperatura),
@@ -166,8 +208,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }));
 
     return {
-      codigo: tanque.codigo,
-      nome: tanque.nome,
+      titulo: 'Media semanal real dos 3 tanques',
       pontos: pontosComAltura,
       horarios: pontosComAltura.map((ponto) => ponto.horario)
     };

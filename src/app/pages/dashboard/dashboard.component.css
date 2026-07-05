@@ -412,6 +412,18 @@ main {
   padding-bottom: 4px;
 }
 
+.grafico-vazio {
+  width: 100%;
+  align-self: center;
+  text-align: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  padding: 20px 8px;
+}
+
 .barra {
   flex: 1;
   background: rgba(139, 92, 246, 0.35);
@@ -519,6 +531,13 @@ main {
   background: rgba(239, 68, 68, 0.06);
 }
 
+.lista-log li.critico {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  background: rgba(239, 68, 68, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.12);
+}
+
 .hora {
   color: var(--text-dim);
   margin-right: 8px;
@@ -526,9 +545,85 @@ main {
 
 .lista-log li.sucesso .hora,
 .lista-log li.alerta .hora,
-.lista-log li.erro .hora {
+.lista-log li.erro .hora,
+.lista-log li.critico .hora {
   color: inherit;
   opacity: 0.6;
+}
+
+.turnos-diario {
+  background: var(--bg-card);
+  border: 1px solid rgba(56, 189, 248, 0.16);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 32px;
+  animation: fadeUp 0.5s ease forwards;
+}
+
+.turno-resumo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.turno-resumo > div {
+  min-width: 0;
+  border-left: 2px solid rgba(56, 189, 248, 0.45);
+  padding-left: 12px;
+}
+
+.meta-label {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.turno-resumo strong {
+  display: block;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-relatorio {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #04111a;
+  background: var(--accent-blue);
+  border: none;
+  border-radius: 4px;
+  padding: 10px 16px;
+  min-height: 38px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-relatorio:hover:not(:disabled) {
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
+  filter: brightness(1.08);
+}
+
+.btn-relatorio:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.diario-feed {
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .relatar-section {
@@ -870,6 +965,14 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .turno-resumo {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .btn-relatorio {
+    grid-column: 1 / -1;
+  }
+
   nav.menu {
     display: none;
   }
@@ -887,6 +990,10 @@ footer {
   .QualTropaGeral {
     flex-direction: column;
     gap: 12px;
+  }
+
+  .turno-resumo {
+    grid-template-columns: 1fr;
   }
 
   .statusbar {
