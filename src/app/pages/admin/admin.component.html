@@ -7,14 +7,30 @@
             Operadores devem usar a <a routerLink="/login">tela de login</a>.
         </p>
 
-        <input type="password" [(ngModel)]="adminPassword" (keyup.enter)="verificarSenha()" placeholder="Senha de administrador..." class="form-input">
+        <input type="password" [(ngModel)]="adminPassword" (keyup.enter)="verificarSenha()"
+            placeholder="Senha de administrador..." class="form-input">
 
         <button (click)="verificarSenha()" class="btn-primary" style="margin-top: 15px;">Entrar como Admin</button>
         <button routerLink="/login" class="btn-secondary" style="margin-top: 10px;">Sou operador</button>
         <button routerLink="/" class="btn-secondary" style="margin-top: 10px;">Voltar</button>
 
+        <p class="text-termos"> Os dados serão mantidos em nossa base de dados, só enquanto for desejado por
+            você. A
+            qualquer momento, será possível editar ou remover tais dados. <a
+                href="https://www.Axon control.com.br/politica-de-privacidade/ " target="_blank">'Termos e Condições'
+            </a>
+        </p>
+
+        <div class="lgpd-container">
+            <label class="lgpd-opcao">
+                <input type="checkbox" id="lgpd-termos" required>
+                <span class="checkbox-custom"></span>
+                <span class="label-texto">Sim. Li e concordo com os Termos e Condições *</span>
+            </label>
+        </div>
+
         @if (errorMessage) {
-            <p class="error-msg">{{ errorMessage }}</p>
+        <p class="error-msg">{{ errorMessage }}</p>
         }
     </div>
 </div>
@@ -45,33 +61,40 @@
             <div style="display:flex;flex-direction:column;gap:16px;">
                 <div class="form-group">
                     <label class="form-label">NOME DO USUÁRIO</label>
-                    <input type="text" [(ngModel)]="novoNome" class="form-input" placeholder="Ex: João da Silva" autocomplete="off">
+                    <input type="text" [(ngModel)]="novoNome" class="form-input" placeholder="Ex: João da Silva"
+                        autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label class="form-label">CPF</label>
-                    <input type="text" [(ngModel)]="novoCpf" class="form-input" placeholder="Ex: 12345678900 ou qualquer identificador" autocomplete="off">
+                    <input type="text" [(ngModel)]="novoCpf" class="form-input"
+                        placeholder="Ex: 12345678900 ou qualquer identificador" autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label class="form-label">TURNO</label>
-                    <select [(ngModel)]="turnoPresetIndex" (ngModelChange)="aplicarPresetTurno($event)" class="form-input">
+                    <select [(ngModel)]="turnoPresetIndex" (ngModelChange)="aplicarPresetTurno($event)"
+                        class="form-input">
                         @for (preset of turnosPreset; track preset.turno_nome; let i = $index) {
-                            <option [ngValue]="i">{{ preset.turno_nome }} ({{ preset.turno_inicio }} - {{ preset.turno_fim }})</option>
+                        <option [ngValue]="i">{{ preset.turno_nome }} ({{ preset.turno_inicio }} - {{
+                            preset.turno_fim }})</option>
                         }
                         <option [ngValue]="-1">Personalizado</option>
                     </select>
                 </div>
                 @if (turnoPresetIndex === -1) {
-                    <div class="form-group">
-                        <label class="form-label">NOME DO TURNO</label>
-                        <input type="text" [(ngModel)]="turnoNome" class="form-input" placeholder="Ex: Madrugada" autocomplete="off">
-                    </div>
+                <div class="form-group">
+                    <label class="form-label">NOME DO TURNO</label>
+                    <input type="text" [(ngModel)]="turnoNome" class="form-input" placeholder="Ex: Madrugada"
+                        autocomplete="off">
+                </div>
                 }
                 <div class="form-group">
                     <label class="form-label">HORÁRIO DO TURNO</label>
                     <div class="turno-horario">
-                        <input type="time" [(ngModel)]="turnoInicio" class="form-input" [disabled]="turnoPresetIndex !== -1">
+                        <input type="time" [(ngModel)]="turnoInicio" class="form-input"
+                            [disabled]="turnoPresetIndex !== -1">
                         <span>até</span>
-                        <input type="time" [(ngModel)]="turnoFim" class="form-input" [disabled]="turnoPresetIndex !== -1">
+                        <input type="time" [(ngModel)]="turnoFim" class="form-input"
+                            [disabled]="turnoPresetIndex !== -1">
                     </div>
                 </div>
 
@@ -117,7 +140,8 @@
                     <div class="main-title">Gerenciamento<br>de <span>Usuários</span></div>
                 </div>
                 <div class="search-box">
-                    <input type="text" class="search-input" [(ngModel)]="termoBusca" (input)="filtrarTabela()" placeholder="Filtrar por nome...">
+                    <input type="text" class="search-input" [(ngModel)]="termoBusca" (input)="filtrarTabela()"
+                        placeholder="Filtrar por nome...">
                 </div>
             </div>
 
@@ -147,7 +171,9 @@
                                 <td class="cell-cpf">{{ formatarCpfExibicao(u.cpf) }}</td>
                                 <td>{{ u.turno_nome || '—' }}</td>
                                 <td>{{ formatarHorarioUsuario(u) }}</td>
-                                <td><button (click)="removerConta(u.id_gerado)" class="btn-danger" style="padding: 4px 10px; width: auto; font-size: 10px;">Excluir</button></td>
+                                <td><button (click)="removerConta(u.id_gerado)" class="btn-danger"
+                                        style="padding: 4px 10px; width: auto; font-size: 10px;">Excluir</button>
+                                </td>
                             </tr>
                             } @empty {
                             <tr>
@@ -159,7 +185,8 @@
                 </div>
             </div>
             } @else {
-            <div id="placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--mono);font-size:13px;opacity:0.5;">
+            <div id="placeholder"
+                style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--mono);font-size:13px;opacity:0.5;">
                 Clique em "Ver Usuários" para exibir os registros
             </div>
             }
@@ -172,7 +199,7 @@
     </div>
 
     @if (toastVisible) {
-        <div id="toast" class="show" [ngClass]="toastClass">{{ toastMessage }}</div>
+    <div id="toast" class="show" [ngClass]="toastClass">{{ toastMessage }}</div>
     }
 </div>
 }

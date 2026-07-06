@@ -5,20 +5,13 @@
       Informe o ID gerado no cadastro (ex.: <strong>AX101</strong>) para abrir o dashboard industrial.
     </p>
 
-    <input
-      type="text"
-      [(ngModel)]="operadorId"
-      (keyup.enter)="entrar()"
-      placeholder="ID do operador"
-      class="form-input"
-      autocomplete="username"
-      autocapitalize="characters"
-      spellcheck="false"
-    />
+    <input type="text" [(ngModel)]="operadorId" (keyup.enter)="entrar()" placeholder="ID do operador" class="form-input"
+      autocomplete="username" autocapitalize="characters" spellcheck="false" />
 
     <button type="button" (click)="entrar()" class="btn-primary" [disabled]="carregando">
       {{ carregando ? 'Verificando...' : 'Entrar no Dashboard' }}
     </button>
+
 
     <button routerLink="/" class="btn-secondary">Voltar</button>
 
@@ -28,7 +21,24 @@
     </p>
 
     @if (errorMessage) {
-      <p class="error-msg">{{ errorMessage }}</p>
+    <p class="error-msg">{{ errorMessage }}</p>
     }
+
+    <p class="text-termos"> Os dados serão mantidos em nossa base de dados, só enquanto for desejado por
+      você. A
+      qualquer momento, será possível editar ou remover tais dados. <a
+        href="https://www.Axon control.com.br/politica-de-privacidade/ " target="_blank">'Termos e Condições'
+      </a>
+    </p>
+
+    <div class="lgpd-container">
+      <label class="lgpd-opcao">
+        <input type="checkbox" id="lgpd-termos" required>
+        <span class="checkbox-custom"></span>
+        <span class="label-texto">Sim. Li e concordo com os Termos e Condições *</span>
+      </label>
+    </div>
   </div>
+
+
 </div>
