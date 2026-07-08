@@ -1359,3 +1359,6 @@ main {
     width: 100%;
   }
 }
+.legenda-item barra-t1,legenda-item barra-t2, legenda-item barra-t3 {
+  color: #e2e8f0;
+} 

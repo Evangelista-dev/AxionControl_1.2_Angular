@@ -1,19 +1,4 @@
--- =============================================================================
--- AXIOM CONTROL — Setup completo do Supabase
--- =============================================================================
--- Como usar:
---   1. Abra o Supabase Dashboard → SQL Editor → New query
---   2. Cole este arquivo inteiro e clique em RUN
---   3. Confira no Table Editor se as tabelas e dados foram criados
---
--- O script é idempotente: pode rodar mais de uma vez (drop + recreate policies).
--- ATENÇÃO: a seção de limpeza APAGA todos os dados das tabelas do app.
--- =============================================================================
 
--- =============================================================================
--- 1. LIMPEZA (reset total — DROP TABLE CASCADE remove policies automaticamente)
---    Não use DROP POLICY aqui: falha se a tabela ainda não existir (42P01).
--- =============================================================================
 
 drop table if exists logs_operacao cascade;
 drop table if exists historico_temperatura cascade;
@@ -110,9 +95,6 @@ create table logs_operacao (
   created_at timestamptz not null default now()
 );
 
--- =============================================================================
--- 3. ROW LEVEL SECURITY (role anon — adequado para MVP)
--- =============================================================================
 
 alter table operarios enable row level security;
 alter table status_tanques enable row level security;
@@ -147,9 +129,7 @@ create policy "Escrita anonima ocorrencias_operador" on ocorrencias_operador for
 create policy "Leitura anonima ocorrencias_operador" on ocorrencias_operador for select to anon using (true);
 create policy "Escrita anonima logs_operacao" on logs_operacao for insert to anon with check (true);
 
--- =============================================================================
--- 4. SEEDS — Operadores (login no /admin com o ID)
--- =============================================================================
+
 
 insert into operarios (id_gerado, nome, cpf, turno_nome, turno_inicio, turno_fim, created_at) values
   ('AX101', 'Ana Paula Silva', '529.982.247-25', 'Manhã', '06:00', '14:00', '2026-04-01 08:30:00+00'),
@@ -157,9 +137,7 @@ insert into operarios (id_gerado, nome, cpf, turno_nome, turno_inicio, turno_fim
   ('CN303', 'Juliana Rocha', '153.509.460-56', 'Noite', '22:00', '06:00', '2026-04-03 10:45:00+00'),
   ('DE404', 'Rafael Torres', '231.002.999-00', 'Manhã', '06:00', '14:00', '2026-04-04 11:20:00+00');
 
--- =============================================================================
--- 5. SEEDS — Status dos tanques
--- =============================================================================
+
 
 insert into status_tanques (codigo, linha, nome, temperatura, nivel, status, status_texto) values
   ('TK-001', 'LINHA A', 'Tanque 01 — Misturador', 85, 70, 'normal', 'OPERANDO — NORMAL'),
