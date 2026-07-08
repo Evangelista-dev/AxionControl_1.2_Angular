@@ -16,6 +16,7 @@ export class LoginComponent implements OnInit {
   operadorId = '';
   errorMessage = '';
   carregando = false;
+  termosAceitos = false;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: object,
@@ -33,10 +34,16 @@ export class LoginComponent implements OnInit {
       void this.router.navigate(['/dashboard']);
     }
   }
+async entrar() {
+  
+    if (!this.termosAceitos) {
+      this.errorMessage = 'Você precisa ler e aceitar os Termos e Condições.';
+      return;
+    }
 
-  async entrar() {
     const id = this.operadorId.trim().toUpperCase();
 
+    
     if (!id) {
       this.errorMessage = 'Informe seu ID de operador.';
       return;

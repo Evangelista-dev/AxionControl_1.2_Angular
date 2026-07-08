@@ -14,16 +14,14 @@
         <button routerLink="/login" class="btn-secondary" style="margin-top: 10px;">Sou operador</button>
         <button routerLink="/" class="btn-secondary" style="margin-top: 10px;">Voltar</button>
 
-        <p class="text-termos"> Os dados serão mantidos em nossa base de dados, só enquanto for desejado por
-            você. A
-            qualquer momento, será possível editar ou remover tais dados. <a
-                href="https://www.Axon control.com.br/politica-de-privacidade/ " target="_blank">'Termos e Condições'
+        <p class="text-termos"><a href="https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm" target="_blank">'Termos e
+                Condições'
             </a>
         </p>
 
         <div class="lgpd-container">
             <label class="lgpd-opcao">
-                <input type="checkbox" id="lgpd-termos" required>
+                <input type="checkbox" id="lgpd-termos" [(ngModel)]="termosAceitos" required>
                 <span class="checkbox-custom"></span>
                 <span class="label-texto">Sim. Li e concordo com os Termos e Condições *</span>
             </label>

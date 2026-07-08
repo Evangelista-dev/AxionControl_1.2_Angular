@@ -19,6 +19,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   isAuthorized = false;
   adminPassword = '';
   errorMessage = '';
+  termosAceitos = false;
 
   // Formulário
   novoNome = '';
@@ -81,19 +82,28 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.currentTime = new Date().toLocaleTimeString('pt-BR');
   }
 
-  // 1. CORREÇÃO DO LOGIN UNIFICADO (ADMIN OU OPERADOR)
+
   async verificarSenha() {
+   
+    if (!this.termosAceitos) {
+      this.errorMessage = 'Você precisa ler e aceitar os Termos e Condições.';
+      return;
+    }
+
     const entrada = this.adminPassword.trim();
 
+   
     if (!entrada) {
       this.errorMessage = 'Informe a senha de administrador.';
       return;
     }
 
+  
     if (entrada !== environment.adminPassword) {
       this.errorMessage = 'Senha de administrador incorreta.';
       return;
     }
+
 
     this.authService.clearOperador();
     this.isAuthorized = true;
@@ -101,7 +111,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.adminPassword = '';
     await this.carregarUsuarios();
-  }
+}
 
   sairAdmin() {
     this.authService.clearAdmin();
@@ -278,4 +288,5 @@ export class AdminComponent implements OnInit, OnDestroy {
     }, 3000);
   }
 }
+
 
