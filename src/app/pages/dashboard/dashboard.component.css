@@ -237,16 +237,6 @@ header {
   font-size: 14px;
 }
 
-.sidebar-btn {
-  width: 100%;
-  margin: 0;
-}
-
-.sidebar-msg {
-  margin: 0;
-  font-size: 10px;
-}
-
 .sidebar-log { max-height: 150px; overflow-y: auto; }
 .sidebar-log .lista-log li {
   padding: 5px 8px;
@@ -425,11 +415,18 @@ main {
   color: var(--accent-orange);
 }
 
+.grafico-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 12px;
+}
+
 .filtros-grafico {
   display: flex;
   flex-wrap: wrap;
   gap: 24px;
-  margin: 0 0 12px;
 }
 
 .filtro-mes {
@@ -962,30 +959,35 @@ main {
   color: var(--accent-green);
 }
 
-.btn-relatorio {
+.btn-telegram {
   font-family: 'Rajdhani', sans-serif;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #04111a;
-  background: var(--accent-blue);
+  color: #fff;
+  background: #0088cc;
   border: none;
   border-radius: 4px;
   padding: 10px 16px;
   min-height: 38px;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.btn-relatorio:hover:not(:disabled) {
-  box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
+.btn-telegram:hover:not(:disabled) {
+  box-shadow: 0 0 18px rgba(0, 136, 204, 0.42);
   filter: brightness(1.08);
 }
 
-.btn-relatorio:disabled {
+.btn-telegram:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.mensagem-telegram {
+  margin: 0 0 16px;
 }
 
 .diario-feed {
@@ -1111,54 +1113,6 @@ main {
   font-family: 'Space Mono', monospace;
   font-size: 11px;
   color: var(--accent-green);
-}
-
-.container-dashboard {
-  margin-top: 32px;
-}
-
-.painel-log-vidro {
-  background: var(--bg-card);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 8px;
-  padding: 28px;
-  position: relative;
-  overflow: hidden;
-  animation: fadeUp 0.5s ease forwards;
-}
-
-.painel-log-vidro::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent-purple), var(--accent-green), var(--accent-purple));
-  background-size: 200% 100%;
-  animation: shimmer 3s linear infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-.titulo-ia-vidro {
-  font-family: 'Orbitron', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: var(--accent-purple-bright);
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 .titulo-ia-vidro::before {

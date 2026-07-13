@@ -2,7 +2,12 @@ import { Component, ElementRef, Inject, NgZone, OnDestroy, OnInit, AfterViewInit
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { SupabaseService, ProducaoDiariaRegistro, OperarioTurno } from '../../services/supabase.service';
+import {
+  SupabaseService,
+  ProducaoDiariaRegistro,
+  OperarioTurno,
+  RelatorioTelegramPayload
+} from '../../services/supabase.service';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
 import {
@@ -121,7 +126,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   carregando = true;
   enviandoOcorrencia = false;
-  enviandoRelatorio = false;
+  enviandoTelegram: boolean = false;
   descricaoOcorrencia = '';
   tanquesSelecionados: Record<string, boolean> = {
     'Tanque 01': false,
@@ -134,8 +139,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   uptime = '99.97%';
   ultimoSync = 'agora';
   mensagemEnvio = '';
-  mensagemRelatorio = '';
-  reportEmail = environment.reportEmail;
+  mensagemTelegram: string = '';
   progressoDiaLabel = '';
 
   readonly secoesNav: SecaoNav[] = [
@@ -364,16 +368,32 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  async testarEnvioRelatorio() {
-    this.enviandoRelatorio = true;
-    this.mensagemRelatorio = '';
+  async enviarParaTelegram() {
+    this.enviandoTelegram = true;
+    this.mensagemTelegram = '';
 
-    const sucesso = await this.supabaseService.enviarRelatorioEmail();
+    const periodo = this.kpis.dataExibida && this.kpis.dataExibida !== '--/--/----'
+      ? this.kpis.dataExibida
+      : this.tituloGraficoSemana;
 
-    this.mensagemRelatorio = sucesso
-      ? `Relatorio semanal enviado para ${this.reportEmail}.`
-      : 'Falha ao enviar relatorio semanal. Verifique a Edge Function send-weekly-pdf.';
-    this.enviandoRelatorio = false;
+    const dados: RelatorioTelegramPayload = {
+      periodo,
+      oeeMedio: this.kpis.eficienciaOee,
+      totalAlertas: this.alertasAtivos,
+      temperaturaMedia: this.kpis.temperaturaMedia,
+      nivelMedio: this.kpis.nivel
+    };
+
+    try {
+      await this.supabaseService.enviarRelatorioTelegram(dados);
+      this.mensagemTelegram = 'Relatório atual enviado para o Telegram.';
+    } catch (error) {
+      console.error('Erro ao enviar relatorio para Telegram:', error);
+      const detalhe = error instanceof Error ? error.message : 'Erro desconhecido ao enviar o relatório.';
+      this.mensagemTelegram = `Falha ao enviar relatório para o Telegram: ${detalhe}`;
+    } finally {
+      this.enviandoTelegram = false;
+    }
   }
 
   private async atualizarDadosOperacionais(silencioso: boolean) {

@@ -62,13 +62,6 @@
           </div>
         </div>
 
-        <button class="btn-relatorio sidebar-btn" type="button" [disabled]="enviandoRelatorio" (click)="testarEnvioRelatorio()">
-          {{ enviandoRelatorio ? 'A enviar...' : 'Relatorio Semanal (PDF)' }}
-        </button>
-        @if (mensagemRelatorio) {
-          <p class="mensagem-envio sidebar-msg">{{ mensagemRelatorio }}</p>
-        }
-
         <div class="sidebar-card sidebar-log">
           <span class="meta-label">Eventos recentes</span>
           <ul class="lista-log">
@@ -166,24 +159,37 @@
           <h2 class="titulo-industrial">Monitoramento Termico</h2>
         </div>
 
-        <div class="filtros-grafico">
-          <div class="filtro-mes">
-            <label for="filtro-mes">Mes</label>
-            <select id="filtro-mes" [(ngModel)]="mesSelecionado" (ngModelChange)="onMesSelecionadoChange()">
-              @for (mes of mesesDisponiveis; track mes.valor) {
-                <option [value]="mes.valor">{{ mes.label }}</option>
-              }
-            </select>
-          </div>
-          <div class="filtro-mes">
-            <label for="filtro-semana">Semana</label>
-            <select id="filtro-semana" [(ngModel)]="semanaSelecionada" (ngModelChange)="onSemanaSelecionadaChange()">
-              @for (semana of semanasDisponiveis; track semana.valor) {
-                <option [ngValue]="semana.valor">{{ semana.label }}</option>
-              }
-            </select>
+        <div class="grafico-toolbar">
+          <button
+            class="btn-telegram"
+            type="button"
+            [disabled]="enviandoTelegram"
+            (click)="enviarParaTelegram()"
+          >
+            {{ enviandoTelegram ? 'Enviando...' : 'Enviar para Telegram' }}
+          </button>
+          <div class="filtros-grafico">
+            <div class="filtro-mes">
+              <label for="filtro-mes">Mes</label>
+              <select id="filtro-mes" [(ngModel)]="mesSelecionado" (ngModelChange)="onMesSelecionadoChange()">
+                @for (mes of mesesDisponiveis; track mes.valor) {
+                  <option [value]="mes.valor">{{ mes.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="filtro-mes">
+              <label for="filtro-semana">Semana</label>
+              <select id="filtro-semana" [(ngModel)]="semanaSelecionada" (ngModelChange)="onSemanaSelecionadaChange()">
+                @for (semana of semanasDisponiveis; track semana.valor) {
+                  <option [ngValue]="semana.valor">{{ semana.label }}</option>
+                }
+              </select>
+            </div>
           </div>
         </div>
+        @if (mensagemTelegram) {
+          <p class="mensagem-envio mensagem-telegram">{{ mensagemTelegram }}</p>
+        }
 
         <div class="grafico-legenda">
           <span class="legenda-item barra-t1">TK-001 — Misturador</span>

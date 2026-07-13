@@ -44,6 +44,14 @@ export interface ResumoSemanal {
   nivelMedio: number;
 }
 
+export interface RelatorioTelegramPayload {
+  periodo: string;
+  oeeMedio: number;
+  totalAlertas: number;
+  temperaturaMedia: number;
+  nivelMedio: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -623,34 +631,43 @@ export class SupabaseService {
     return true;
   }
 
-  async enviarRelatorioEmail(): Promise<boolean> {
+  async enviarRelatorioTelegram(dados: RelatorioTelegramPayload): Promise<void> {
     if (!this.supabase || !this.isBrowserRuntime()) {
-      console.info('Envio de relatorio semanal ignorado fora do browser/Supabase.');
-      return false;
+      throw new Error('Supabase não está disponível para enviar o relatório ao Telegram.');
     }
 
-    const dadosCompletos = this.historicoSemanal.length
-      ? (this.historicoSemanal as ProducaoDiariaRegistro[])
-      : await this.obterHistoricoProducao();
-    const dadosSemana = dadosCompletos.slice(-7);
-    const ocorrencias = await this.obterOcorrenciasRecentes();
-    const resumo = this.calcularResumoSemanal(dadosSemana);
+    try {
+      const { data, error } = await this.supabase.functions.invoke('send-telegram-report', {
+        body: dados
+      });
 
-    const { error } = await this.supabase.functions.invoke('send-weekly-pdf', {
-      body: {
-        email: environment.reportEmail,
-        dados: dadosSemana,
-        ocorrencias,
-        resumo
+      if (error) {
+        throw new Error(await this.extrairErroEdgeFunction(error));
       }
-    });
 
-    if (error) {
-      console.error('Erro ao invocar send-weekly-pdf:', error.message);
-      return false;
+      if (!data || data.ok !== true) {
+        throw new Error(data?.error || 'A Edge Function não confirmou o envio do relatório.');
+      }
+    } catch (error) {
+      const mensagem = error instanceof Error ? error.message : 'Erro desconhecido ao chamar a Edge Function.';
+      console.error('Erro ao invocar send-telegram-report:', mensagem, error);
+      throw new Error(mensagem);
+    }
+  }
+
+  private async extrairErroEdgeFunction(error: unknown): Promise<string> {
+    const erroComContexto = error as { message?: string; context?: Response };
+    const mensagemPadrao = erroComContexto?.message || 'A chamada da Edge Function falhou.';
+
+    try {
+      const corpo = await erroComContexto.context?.clone().json() as { error?: unknown; message?: unknown };
+      if (typeof corpo.error === 'string') return corpo.error;
+      if (typeof corpo.message === 'string') return corpo.message;
+    } catch {
+      // Erros de rede/CORS não possuem necessariamente um corpo JSON para ler.
     }
 
-    return true;
+    return mensagemPadrao;
   }
 
   private normalizarProducaoDiaria(row: Record<string, unknown>): ProducaoDiariaRegistro {
