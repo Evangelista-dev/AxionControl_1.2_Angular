@@ -163,6 +163,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private diaInterval: ReturnType<typeof setInterval> | null = null;
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private secaoObserver: IntersectionObserver | null = null;
+  private readonly aoRetomarTela = () => {
+    if (document.visibilityState === 'visible') {
+      void this.atualizarDadosOperacionais(true);
+    }
+  };
 
   private readonly tanquesGrafico = [
     { codigo: 'TK-001', nome: 'Tanque 01', campo: 'temperatura_t1' as const, classe: 'barra-t1' },
@@ -202,6 +207,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       () => this.atualizarDadosOperacionais(true),
       environment.dashboardRefreshMs
     );
+    document.addEventListener('visibilitychange', this.aoRetomarTela);
   }
 
   ngAfterViewInit() {
@@ -215,6 +221,9 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.diaInterval) clearInterval(this.diaInterval);
     if (this.refreshInterval) clearInterval(this.refreshInterval);
     this.secaoObserver?.disconnect();
+    if (isPlatformBrowser(this.platformId)) {
+      document.removeEventListener('visibilitychange', this.aoRetomarTela);
+    }
   }
 
   navegarPara(secaoId: string) {

@@ -38,14 +38,7 @@
           }
         </nav>
 
-        <div class="sidebar-card">
-          <span class="meta-label">Turno atual</span>
-          <strong class="sidebar-valor">{{ turnoAtual?.operario || 'Sem turno' }}</strong>
-          <small>{{ turnoAtual?.horario || '--:-- - --:--' }} · {{ turnoAtual?.status || 'indisponivel' }}</small>
-          @if (turnoIndisponivelMsg) {
-            <small>{{ turnoIndisponivelMsg }}</small>
-          }
-        </div>
+       
 
         <div class="sidebar-card sidebar-stats">
           <div>

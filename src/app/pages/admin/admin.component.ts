@@ -35,6 +35,11 @@ export class AdminComponent implements OnInit, OnDestroy {
   tabelaVisivel = false;
   currentTime = '';
   private timeInterval: any;
+  private readonly aoRetomarTela = () => {
+    if (this.isAuthorized && document.visibilityState === 'visible') {
+      void this.carregarUsuarios();
+    }
+  };
 
   // Notificações (Toast)
   toastMessage = '';
@@ -65,17 +70,21 @@ export class AdminComponent implements OnInit, OnDestroy {
 
       if (this.authService.isAdminLoggedIn()) {
         this.isAuthorized = true;
-        this.carregarUsuarios();
+        void this.carregarUsuarios();
       }
 
       this.atualizarRelogio();
       this.timeInterval = setInterval(() => this.atualizarRelogio(), 1000);
+      document.addEventListener('visibilitychange', this.aoRetomarTela);
     }
   }
 
   ngOnDestroy() {
     if (this.timeInterval) clearInterval(this.timeInterval);
     if (this.toastTimer) clearTimeout(this.toastTimer);
+    if (isPlatformBrowser(this.platformId)) {
+      document.removeEventListener('visibilitychange', this.aoRetomarTela);
+    }
   }
 
   atualizarRelogio() {
@@ -125,7 +134,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   async carregarUsuarios() {
     try {
       const dados = await this.supabaseService.listarOperarios();
-      this.usuarios = dados || [];
+      this.usuarios = [...(dados || [])];
       this.filtrarTabela();
     } catch (error) {
       this.exibirToast('Erro ao carregar usuários do banco.', 'error');

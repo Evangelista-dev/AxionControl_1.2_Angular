@@ -68,7 +68,22 @@ export class SupabaseService {
     }
 
     try {
-      this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey);
+      
+      this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey, {
+        global: {
+          fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+            const headers = new Headers(init?.headers);
+            headers.set('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');
+            headers.set('Pragma', 'no-cache');
+
+            return fetch(input, {
+              ...init,
+              cache: 'no-store',
+              headers
+            });
+          }
+        }
+      });
       this.useMockData = false;
     } catch (error) {
       console.warn('Falha ao inicializar Supabase, usando dados mockados.', error);
@@ -85,7 +100,10 @@ export class SupabaseService {
       return this.mockOperarios;
     }
 
-    const { data, error } = await this.supabase.from('operarios').select('*');
+    const { data, error } = await this.supabase
+      .from('operarios')
+      .select('*')
+      .order('created_at', { ascending: false });
     if (error) {
       console.error('Erro ao listar:', error.message);
       return [];

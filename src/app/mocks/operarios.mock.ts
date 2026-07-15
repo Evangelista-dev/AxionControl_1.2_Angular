@@ -8,5 +8,4 @@ export interface OperarioMock {
   created_at: string;
 }
 
-/** Lista vazia — operadores vêm exclusivamente do Supabase. */
 export const operariosMockData: OperarioMock[] = [];

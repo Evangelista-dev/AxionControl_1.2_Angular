@@ -14,8 +14,8 @@
   --accent-red: #ef4444;
   --accent-blue: #38bdf8;
   --text-primary: #e2e8f0;
-  --text-secondary: #64748b;
-  --text-dim: #334155;
+  --text-secondary: #cbd5e1;
+  --text-dim: #94a3b8;
   --glow-purple: 0 0 20px rgba(139, 92, 246, 0.4);
   --glow-green: 0 0 15px rgba(0, 229, 160, 0.4);
   --glow-red: 0 0 15px rgba(239, 68, 68, 0.5);
@@ -467,7 +467,7 @@ main {
   letter-spacing: 0.08em;
   padding-left: 14px;
   position: relative;
-  color: var(--text-secondary);
+  color: #f1f5f9;
 }
 
 .legenda-item::before {
@@ -527,7 +527,7 @@ main {
 
 .grafico-dia-semana {
   font: 8px 'Space Mono', monospace;
-  color: var(--text-dim);
+  color: #cbd5e1;
 }
 
 .grafico-dia-vazio {
@@ -536,7 +536,7 @@ main {
   justify-content: center;
   height: 100px;
   font: 14px 'Space Mono', monospace;
-  color: var(--text-dim);
+  color: #cbd5e1;
 }
 
 .painel-grafico-semanal .grafico-barras-grupo {
@@ -558,7 +558,7 @@ main {
   position: absolute;
   bottom: 100%;
   font: 8px 'Space Mono', monospace;
-  color: var(--text-dim);
+  color: #f8fafc;
   margin-bottom: 2px;
 }
 
@@ -1313,6 +1313,8 @@ main {
     width: 100%;
   }
 }
-.legenda-item barra-t1,legenda-item barra-t2, legenda-item barra-t3 {
-  color: #e2e8f0;
-} 
+.legenda-item.barra-t1,
+.legenda-item.barra-t2,
+.legenda-item.barra-t3 {
+  color: #f1f5f9;
+}
